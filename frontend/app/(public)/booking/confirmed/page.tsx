@@ -1,8 +1,6 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 import Link from "next/link";
-import { CopyButton } from "@/components/CopyButton";
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
@@ -31,11 +29,7 @@ export default async function BookingConfirmedPage({
 
   if (!booking) notFound();
 
-  const headersList = await headers();
-  const host = headersList.get("host") ?? "localhost:3000";
-  const protocol = host.startsWith("localhost") ? "http" : "https";
   const cancelUrl = `/cancel/${booking.cancelToken}`;
-  const fullCancelUrl = `${protocol}://${host}${cancelUrl}`;
 
   return (
     <div className="max-w-md">
@@ -69,23 +63,13 @@ export default async function BookingConfirmedPage({
           </div>
         </dl>
 
-        <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <p className="text-sm font-medium text-amber-800 mb-1">Need to cancel?</p>
-          <p className="text-xs text-amber-700 mb-2">
-            Save this link — it&apos;s the only way to cancel without an account.
-          </p>
-          <p className="text-xs font-mono break-all text-amber-900 bg-white border border-amber-200 rounded px-2 py-1.5 mb-2">
-            {fullCancelUrl}
-          </p>
-          <div className="flex items-center gap-3">
-            <CopyButton text={fullCancelUrl} />
-            <Link
-              href={cancelUrl}
-              className="text-xs text-amber-700 hover:text-amber-900 underline"
-            >
-              Open link
-            </Link>
-          </div>
+        <div className="mt-6 pt-5 border-t border-gray-100">
+          <Link
+            href={cancelUrl}
+            className="text-sm text-red-600 hover:text-red-800 font-medium transition-colors"
+          >
+            Cancel appointment →
+          </Link>
         </div>
       </div>
 
