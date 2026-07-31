@@ -60,7 +60,7 @@ export default async function MyBookingPage({
               No reservations were found for <span className="font-mono">{trimmedEmail}</span>.
             </p>
             <Link
-              href="/"
+              href="/slots"
               className="inline-block mt-4 text-amber-600 hover:text-amber-800 text-sm font-medium"
             >
               Book an appointment →

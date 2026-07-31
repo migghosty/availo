@@ -10,7 +10,7 @@ export default function BookingCancelledPage() {
           Your appointment has been cancelled. The slot is now available for others to book.
         </p>
         <Link
-          href="/"
+          href="/slots"
           className="inline-block mt-6 bg-amber-500 hover:bg-amber-600 text-white font-medium px-6 py-2 rounded-lg transition-colors text-sm"
         >
           Book a new appointment

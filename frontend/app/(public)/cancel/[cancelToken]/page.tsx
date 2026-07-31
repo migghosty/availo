@@ -34,7 +34,7 @@ export default async function CancelPage({
           <p className="text-sm text-gray-400 mt-1">
             This link may have already been used or is invalid.
           </p>
-          <Link href="/" className="inline-block mt-4 text-amber-600 hover:text-amber-800 text-sm font-medium">
+          <Link href="/slots" className="inline-block mt-4 text-amber-600 hover:text-amber-800 text-sm font-medium">
             View available slots →
           </Link>
         </div>

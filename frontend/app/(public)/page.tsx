@@ -1,76 +1,61 @@
-import { db } from "@/lib/db";
 import Link from "next/link";
 
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  }).format(new Date(date));
-}
+const services = [
+  { emoji: "✂️", name: "Haircut", price: "$25" },
+  { emoji: "✨", name: "Eyebrows", price: "$10" },
+  { emoji: "🪒", name: "Beard", price: "$20" },
+  { emoji: "💈", name: "Hair & Beard", price: "$40" },
+];
 
-function formatTime(date: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(new Date(date));
-}
-
-export default async function HomePage() {
-  const slots = await db.slot.findMany({
-    where: { startTime: { gte: new Date() }, isAvailable: true },
-    orderBy: { startTime: "asc" },
-  });
-
-  const grouped = new Map<string, typeof slots>();
-  for (const slot of slots) {
-    const key = formatDate(slot.startTime);
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key)!.push(slot);
-  }
-
+export default function LandingPage() {
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800">Book an Appointment</h1>
-        <p className="text-gray-500 mt-1">Pick a time that works for you.</p>
+      {/* Hero */}
+      <div className="py-10 sm:py-16 text-center">
+        <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 tracking-tight">
+          Fresh cuts. Clean edges.
+        </h1>
+        <p className="text-gray-500 mt-3 text-base sm:text-lg px-2">
+          Book your next appointment in seconds — no account needed.
+        </p>
+        <Link
+          href="/slots"
+          className="inline-block mt-7 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold px-8 py-3 rounded-xl text-sm transition-colors shadow-sm"
+        >
+          Book Now
+        </Link>
       </div>
 
-      {grouped.size === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <p className="text-gray-500">No available slots right now. Check back soon!</p>
-        </div>
-      ) : (
-        <div className="space-y-7">
-          {Array.from(grouped.entries()).map(([dateLabel, dateSlots]) => (
-            <section key={dateLabel}>
-              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-                {dateLabel}
-              </h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {dateSlots.map((slot) => (
-                  <Link
-                    key={slot.id}
-                    href={`/book/${slot.id}`}
-                    className="bg-white rounded-xl border border-gray-200 px-5 py-4 flex items-center justify-between hover:border-amber-400 hover:shadow-sm transition-all group"
-                  >
-                    <div>
-                      <p className="font-semibold text-slate-700">
-                        {formatTime(slot.startTime)}
-                      </p>
-                      <p className="text-sm text-gray-400">{slot.durationMinutes} min</p>
-                    </div>
-                    <span className="text-amber-500 text-sm font-medium group-hover:translate-x-1 transition-transform">
-                      Book →
-                    </span>
-                  </Link>
-                ))}
+      {/* Services */}
+      <div className="mt-2">
+        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+          Services
+        </h2>
+        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+          {services.map((service) => (
+            <div
+              key={service.name}
+              className="flex items-center justify-between px-5 py-4 sm:px-6"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl" aria-hidden>{service.emoji}</span>
+                <span className="font-medium text-slate-700">{service.name}</span>
               </div>
-            </section>
+              <span className="text-amber-600 font-semibold">{service.price}</span>
+            </div>
           ))}
         </div>
-      )}
+      </div>
+
+      {/* CTA footer */}
+      <div className="mt-10 text-center">
+        <Link
+          href="/slots"
+          className="text-sm text-amber-600 hover:text-amber-800 font-medium transition-colors"
+        >
+          View available times →
+        </Link>
+      </div>
     </div>
   );
 }

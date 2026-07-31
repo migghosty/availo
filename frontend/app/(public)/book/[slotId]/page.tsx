@@ -29,7 +29,7 @@ export default async function BookSlotPage({
   if (!slot) notFound();
 
   const backLink = (
-    <Link href="/" className="text-sm text-amber-600 hover:text-amber-800">
+    <Link href="/slots" className="text-sm text-amber-600 hover:text-amber-800">
       ← Back to slots
     </Link>
   );
@@ -41,7 +41,7 @@ export default async function BookSlotPage({
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center mt-4">
           <p className="text-gray-600 font-medium">This time has already passed.</p>
           <p className="text-sm text-gray-400 mt-1">This slot is no longer available for booking.</p>
-          <Link href="/" className="inline-block mt-4 text-amber-600 hover:text-amber-800 text-sm font-medium">
+          <Link href="/slots" className="inline-block mt-4 text-amber-600 hover:text-amber-800 text-sm font-medium">
             View other available slots →
           </Link>
         </div>
@@ -57,7 +57,7 @@ export default async function BookSlotPage({
           <p className="text-gray-600 font-medium">This slot is no longer available.</p>
           <p className="text-sm text-gray-400 mt-1">Someone else just booked it.</p>
           <Link
-            href="/"
+            href="/slots"
             className="inline-block mt-4 text-amber-600 hover:text-amber-800 text-sm font-medium"
           >
             View other available slots →
