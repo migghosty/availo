@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { todayInTimezone } from "@/lib/timezone";
 
 export function CreateSlotForm({ defaultDuration }: { defaultDuration: number }) {
   const router = useRouter();
@@ -55,7 +56,7 @@ export function CreateSlotForm({ defaultDuration }: { defaultDuration: number })
     if (created > 0) router.refresh();
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayInTimezone();
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">

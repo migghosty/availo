@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { zonedWallTimeToUtc } from "@/lib/timezone";
 import { NextRequest } from "next/server";
 
 export async function GET() {
@@ -21,9 +22,15 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "startTime and durationMinutes are required" }, { status: 400 });
   }
 
+  const startAt = zonedWallTimeToUtc(startTime);
+
+  if (startAt < new Date()) {
+    return Response.json({ error: "Cannot create a slot in the past" }, { status: 400 });
+  }
+
   const slot = await db.slot.create({
     data: {
-      startTime: new Date(startTime),
+      startTime: startAt,
       durationMinutes: Number(durationMinutes),
     },
   });

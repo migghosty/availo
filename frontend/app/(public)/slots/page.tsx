@@ -1,10 +1,12 @@
 import { db } from "@/lib/db";
 import Link from "next/link";
+import { BUSINESS_TIMEZONE } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIMEZONE,
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -13,6 +15,7 @@ function formatDate(date: Date) {
 
 function formatTime(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIMEZONE,
     hour: "numeric",
     minute: "2-digit",
     hour12: true,

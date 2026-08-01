@@ -1,8 +1,10 @@
 import { db } from "@/lib/db";
 import Link from "next/link";
+import { BUSINESS_TIMEZONE } from "@/lib/timezone";
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIMEZONE,
     weekday: "long",
     month: "long",
     day: "numeric",

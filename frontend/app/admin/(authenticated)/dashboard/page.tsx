@@ -2,11 +2,13 @@ import { db } from "@/lib/db";
 import { DeleteSlotButton } from "@/components/DeleteSlotButton";
 import { AdminCancelBookingButton } from "@/components/AdminCancelBookingButton";
 import Link from "next/link";
+import { BUSINESS_TIMEZONE } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIMEZONE,
     weekday: "short",
     month: "short",
     day: "numeric",
