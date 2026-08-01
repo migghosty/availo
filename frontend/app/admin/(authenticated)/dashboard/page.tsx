@@ -48,53 +48,93 @@ export default async function DashboardPage() {
           </Link>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden overflow-x-auto">
-          <table className="w-full text-sm min-w-[560px]">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-5 py-3 font-medium text-gray-600">Date &amp; Time</th>
-                <th className="text-left px-5 py-3 font-medium text-gray-600">Duration</th>
-                <th className="text-left px-5 py-3 font-medium text-gray-600">Status</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {slots.map((slot) => (
-                <tr key={slot.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3 font-medium text-slate-700">
+        <>
+          {/* Card list: default (phones/tablets) */}
+          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 md:hidden">
+            {slots.map((slot) => (
+              <div key={slot.id} className="flex items-start justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <p className="font-medium text-slate-700 text-sm">
                     {formatDateTime(slot.startTime)}
-                  </td>
-                  <td className="px-5 py-3 text-gray-500">
-                    {slot.durationMinutes} min
-                  </td>
-                  <td className="px-5 py-3">
+                  </p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <span className="text-xs text-gray-500">{slot.durationMinutes} min</span>
                     {slot.booking ? (
-                      <div>
-                        <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full">
-                          Booked
-                        </span>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {slot.booking.clientName} &middot; {slot.booking.clientEmail}
-                        </p>
-                      </div>
+                      <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                        Booked
+                      </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">
                         Available
                       </span>
                     )}
-                  </td>
-                  <td className="px-5 py-3 text-right whitespace-nowrap">
-                    {slot.booking ? (
-                      <AdminCancelBookingButton bookingId={slot.booking.id} />
-                    ) : (
-                      <DeleteSlotButton slotId={slot.id} />
-                    )}
-                  </td>
+                  </div>
+                  {slot.booking && (
+                    <p className="text-xs text-gray-500 mt-1 truncate">
+                      {slot.booking.clientName} &middot; {slot.booking.clientEmail}
+                    </p>
+                  )}
+                </div>
+                <div className="flex-none">
+                  {slot.booking ? (
+                    <AdminCancelBookingButton bookingId={slot.booking.id} />
+                  ) : (
+                    <DeleteSlotButton slotId={slot.id} />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Table: medium screens and up */}
+          <div className="hidden md:block bg-white rounded-xl border border-gray-200 overflow-hidden overflow-x-auto">
+            <table className="w-full text-sm min-w-[560px]">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left px-5 py-3 font-medium text-gray-600">Date &amp; Time</th>
+                  <th className="text-left px-5 py-3 font-medium text-gray-600">Duration</th>
+                  <th className="text-left px-5 py-3 font-medium text-gray-600">Status</th>
+                  <th className="px-5 py-3" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {slots.map((slot) => (
+                  <tr key={slot.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3 font-medium text-slate-700">
+                      {formatDateTime(slot.startTime)}
+                    </td>
+                    <td className="px-5 py-3 text-gray-500">
+                      {slot.durationMinutes} min
+                    </td>
+                    <td className="px-5 py-3">
+                      {slot.booking ? (
+                        <div>
+                          <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                            Booked
+                          </span>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {slot.booking.clientName} &middot; {slot.booking.clientEmail}
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">
+                          Available
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-right whitespace-nowrap">
+                      {slot.booking ? (
+                        <AdminCancelBookingButton bookingId={slot.booking.id} />
+                      ) : (
+                        <DeleteSlotButton slotId={slot.id} />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

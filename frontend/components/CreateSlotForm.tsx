@@ -78,7 +78,7 @@ export function CreateSlotForm({ defaultDuration }: { defaultDuration: number })
           <button
             type="button"
             onClick={addTime}
-            className="text-sm text-amber-600 hover:text-amber-800 font-medium"
+            className="text-sm text-amber-600 hover:text-amber-800 font-medium p-2 -m-2"
           >
             + Add time
           </button>
@@ -97,7 +97,7 @@ export function CreateSlotForm({ defaultDuration }: { defaultDuration: number })
                 <button
                   type="button"
                   onClick={() => removeTime(i)}
-                  className="text-sm text-gray-400 hover:text-red-500 transition-colors"
+                  className="text-sm text-gray-400 hover:text-red-500 transition-colors p-2 -m-2"
                 >
                   ✕
                 </button>

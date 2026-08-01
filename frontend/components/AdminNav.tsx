@@ -12,7 +12,7 @@ export function AdminNav() {
     return (
       <Link
         href={href}
-        className={`text-sm px-3 py-1.5 rounded transition-colors ${
+        className={`text-sm px-3 py-2 rounded transition-colors ${
           active
             ? "bg-slate-700 text-white"
             : "text-slate-300 hover:text-white hover:bg-slate-700"
@@ -39,7 +39,7 @@ export function AdminNav() {
         </div>
         <button
           onClick={() => signOut({ callbackUrl: "/admin/login" })}
-          className="text-sm text-slate-400 hover:text-white transition-colors flex-none"
+          className="text-sm text-slate-400 hover:text-white transition-colors flex-none px-2 py-2"
         >
           Sign out
         </button>
