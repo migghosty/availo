@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { SettingsForm } from "@/components/SettingsForm";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function SettingsPage() {
   const settings = await db.settings.findFirst();
   const duration = settings?.slotDurationMin ?? 30;

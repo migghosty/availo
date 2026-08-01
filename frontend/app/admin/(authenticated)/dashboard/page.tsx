@@ -3,6 +3,8 @@ import { DeleteSlotButton } from "@/components/DeleteSlotButton";
 import { AdminCancelBookingButton } from "@/components/AdminCancelBookingButton";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "short",

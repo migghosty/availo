@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "long",

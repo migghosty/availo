@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { CreateSlotForm } from "@/components/CreateSlotForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewSlotPage() {
   const settings = await db.settings.findFirst();
   const duration = settings?.slotDurationMin ?? 30;
