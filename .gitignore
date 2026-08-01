@@ -1,3 +1,4 @@
 creds.cfg
 PLAN.md
 .vercel
+.env*
