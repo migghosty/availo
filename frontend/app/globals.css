@@ -18,3 +18,12 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* iOS Safari zooms the viewport on focus when a form control's font-size is
+   under 16px, which leaves the page wider than the screen until the user
+   unzooms. Forms in this app use text-sm (14px) inputs, so enforce 16px here. */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
