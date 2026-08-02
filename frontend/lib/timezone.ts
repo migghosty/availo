@@ -44,16 +44,27 @@ export function zonedWallTimeToUtc(
   return new Date(naiveUtc.getTime() + diff);
 }
 
-/** Today's date (YYYY-MM-DD) as observed in `timeZone`, not the runtime's own zone. */
-export function todayInTimezone(timeZone: string = BUSINESS_TIMEZONE): string {
+/** The calendar date (YYYY-MM-DD) `date` falls on as observed in `timeZone`. */
+export function dateKeyInTimezone(date: Date, timeZone: string = BUSINESS_TIMEZONE): string {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).formatToParts(new Date());
+  }).formatToParts(date);
 
   const map: Record<string, string> = {};
   for (const part of parts) map[part.type] = part.value;
   return `${map.year}-${map.month}-${map.day}`;
+}
+
+/** Today's date (YYYY-MM-DD) as observed in `timeZone`, not the runtime's own zone. */
+export function todayInTimezone(timeZone: string = BUSINESS_TIMEZONE): string {
+  return dateKeyInTimezone(new Date(), timeZone);
+}
+
+/** Adds `days` calendar days to a YYYY-MM-DD date key. */
+export function addDaysToDateKey(dateKey: string, days: number): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
