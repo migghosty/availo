@@ -22,7 +22,7 @@ export function AdminCancelBookingButton({ bookingId }: { bookingId: number }) {
     <button
       onClick={handleClick}
       disabled={loading}
-      className="inline-block -m-2 p-2 text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50 transition-colors"
+      className="inline-block -m-2 p-2 text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium disabled:opacity-50 transition-colors"
     >
       {loading ? "Cancelling…" : "Cancel booking"}
     </button>

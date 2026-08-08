@@ -18,7 +18,7 @@ export function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="text-xs text-amber-700 hover:text-amber-900 font-medium underline transition-colors"
+      className="text-xs text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-300 font-medium underline transition-colors"
     >
       {copied ? "Copied!" : "Copy link"}
     </button>

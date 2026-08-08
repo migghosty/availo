@@ -31,8 +31,8 @@ export default async function MyBookingPage({
   return (
     <div className="max-w-lg">
       <div className="mb-7">
-        <h1 className="text-2xl font-bold text-slate-800">Find your booking</h1>
-        <p className="text-gray-500 mt-1 text-sm">
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Find your booking</h1>
+        <p className="text-gray-500 dark:text-slate-400 mt-1 text-sm">
           Enter the email address you used when booking.
         </p>
       </div>
@@ -44,7 +44,7 @@ export default async function MyBookingPage({
           defaultValue={email ?? ""}
           placeholder="your@email.com"
           required
-          className="flex-1 border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+          className="flex-1 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
         />
         <button
           type="submit"
@@ -56,14 +56,14 @@ export default async function MyBookingPage({
 
       {bookings !== null && (
         bookings.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-            <p className="text-gray-600 font-medium">No upcoming bookings found.</p>
-            <p className="text-sm text-gray-400 mt-1">
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-8 text-center">
+            <p className="text-gray-600 dark:text-slate-300 font-medium">No upcoming bookings found.</p>
+            <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">
               No reservations were found for <span className="font-mono">{trimmedEmail}</span>.
             </p>
             <Link
               href="/slots"
-              className="inline-block mt-4 text-amber-600 hover:text-amber-800 text-sm font-medium"
+              className="inline-block mt-4 text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 text-sm font-medium"
             >
               Book an appointment →
             </Link>
@@ -74,31 +74,31 @@ export default async function MyBookingPage({
               return (
                 <div
                   key={booking.id}
-                  className="bg-white rounded-xl border border-gray-200 p-6"
+                  className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6"
                 >
                   <dl className="space-y-3 text-sm">
                     <div className="flex justify-between">
-                      <dt className="text-gray-500">Date &amp; time</dt>
-                      <dd className="font-medium text-slate-700 text-right">
+                      <dt className="text-gray-500 dark:text-slate-400">Date &amp; time</dt>
+                      <dd className="font-medium text-slate-700 dark:text-slate-200 text-right">
                         {formatDateTime(booking.slot.startTime)}
                       </dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt className="text-gray-500">Duration</dt>
-                      <dd className="font-medium text-slate-700">
+                      <dt className="text-gray-500 dark:text-slate-400">Duration</dt>
+                      <dd className="font-medium text-slate-700 dark:text-slate-200">
                         {booking.slot.durationMinutes} min
                       </dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt className="text-gray-500">Name</dt>
-                      <dd className="font-medium text-slate-700">{booking.clientName}</dd>
+                      <dt className="text-gray-500 dark:text-slate-400">Name</dt>
+                      <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.clientName}</dd>
                     </div>
                   </dl>
 
-                  <div className="mt-5 pt-4 border-t border-gray-100">
+                  <div className="mt-5 pt-4 border-t border-gray-100 dark:border-slate-800">
                     <Link
                       href={`/cancel/${booking.cancelToken}`}
-                      className="inline-block text-sm text-red-600 hover:text-red-800 font-medium transition-colors"
+                      className="inline-block text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium transition-colors"
                     >
                       Cancel appointment →
                     </Link>

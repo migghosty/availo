@@ -61,24 +61,24 @@ export function CreateSlotForm({ defaultDuration }: { defaultDuration: number })
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Date</label>
         <input
           type="date"
           value={date}
           min={today}
           onChange={(e) => setDate(e.target.value)}
           required
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+          className="border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
         />
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-gray-700">Start times</label>
+          <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Start times</label>
           <button
             type="button"
             onClick={addTime}
-            className="text-sm text-amber-600 hover:text-amber-800 font-medium p-2 -m-2"
+            className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 font-medium p-2 -m-2"
           >
             + Add time
           </button>
@@ -91,13 +91,13 @@ export function CreateSlotForm({ defaultDuration }: { defaultDuration: number })
                 value={time}
                 onChange={(e) => updateTime(i, e.target.value)}
                 required
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
               {times.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeTime(i)}
-                  className="text-sm text-gray-400 hover:text-red-500 transition-colors p-2 -m-2"
+                  className="text-sm text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-2 -m-2"
                 >
                   ✕
                 </button>
@@ -105,7 +105,7 @@ export function CreateSlotForm({ defaultDuration }: { defaultDuration: number })
             </div>
           ))}
         </div>
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">
           Each slot is {defaultDuration} minutes. Change this in Settings.
         </p>
       </div>
@@ -119,14 +119,14 @@ export function CreateSlotForm({ defaultDuration }: { defaultDuration: number })
       </button>
 
       {result && (
-        <div className="rounded-lg border p-4 text-sm space-y-1">
+        <div className="rounded-lg border border-gray-200 dark:border-slate-700 p-4 text-sm space-y-1">
           {result.created > 0 && (
-            <p className="text-green-700 font-medium">
+            <p className="text-green-700 dark:text-green-400 font-medium">
               ✓ {result.created} slot{result.created !== 1 ? "s" : ""} created successfully.
             </p>
           )}
           {result.errors.map((err, i) => (
-            <p key={i} className="text-red-600">
+            <p key={i} className="text-red-600 dark:text-red-400">
               ✕ {err}
             </p>
           ))}

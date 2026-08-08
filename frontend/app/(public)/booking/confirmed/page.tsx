@@ -35,40 +35,40 @@ export default async function BookingConfirmedPage({
 
   return (
     <div className="max-w-md">
-      <div className="bg-white rounded-xl border border-green-200 p-8">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-green-200 dark:border-green-900 p-8">
         <div className="flex items-center gap-3 mb-5">
           <span className="text-3xl">✓</span>
           <div>
-            <h1 className="text-xl font-bold text-slate-800">You&apos;re booked!</h1>
-            <p className="text-sm text-gray-500">See you soon, {booking.clientName}.</p>
+            <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">You&apos;re booked!</h1>
+            <p className="text-sm text-gray-500 dark:text-slate-400">See you soon, {booking.clientName}.</p>
           </div>
         </div>
 
-        <dl className="space-y-3 text-sm border-t border-gray-100 pt-5">
+        <dl className="space-y-3 text-sm border-t border-gray-100 dark:border-slate-800 pt-5">
           <div className="flex justify-between">
-            <dt className="text-gray-500">Date &amp; time</dt>
-            <dd className="font-medium text-slate-700">
+            <dt className="text-gray-500 dark:text-slate-400">Date &amp; time</dt>
+            <dd className="font-medium text-slate-700 dark:text-slate-200">
               {formatDateTime(booking.slot.startTime)}
             </dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-gray-500">Duration</dt>
-            <dd className="font-medium text-slate-700">{booking.slot.durationMinutes} min</dd>
+            <dt className="text-gray-500 dark:text-slate-400">Duration</dt>
+            <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.slot.durationMinutes} min</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-gray-500">Name</dt>
-            <dd className="font-medium text-slate-700">{booking.clientName}</dd>
+            <dt className="text-gray-500 dark:text-slate-400">Name</dt>
+            <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.clientName}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-gray-500">Email</dt>
-            <dd className="font-medium text-slate-700">{booking.clientEmail}</dd>
+            <dt className="text-gray-500 dark:text-slate-400">Email</dt>
+            <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.clientEmail}</dd>
           </div>
         </dl>
 
-        <div className="mt-6 pt-5 border-t border-gray-100">
+        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-slate-800">
           <Link
             href={cancelUrl}
-            className="text-sm text-red-600 hover:text-red-800 font-medium transition-colors"
+            className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium transition-colors"
           >
             Cancel appointment →
           </Link>
@@ -76,7 +76,7 @@ export default async function BookingConfirmedPage({
       </div>
 
       <div className="mt-4 text-center">
-        <Link href="/slots" className="text-sm text-gray-500 hover:text-gray-700">
+        <Link href="/slots" className="text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">
           ← Back to slots
         </Link>
       </div>

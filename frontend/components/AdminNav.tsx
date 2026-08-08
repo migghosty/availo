@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV_ITEMS = [
   { href: "/admin/dashboard", label: "Dashboard" },
@@ -19,7 +20,7 @@ export function AdminNav() {
   }
 
   return (
-    <nav className="bg-slate-800 text-white shadow-md">
+    <nav className="bg-slate-800 dark:bg-slate-900 text-white shadow-md">
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center justify-between py-3">
           <Link
@@ -28,12 +29,15 @@ export function AdminNav() {
           >
             ✂ Availo
           </Link>
-          <button
-            onClick={() => signOut({ callbackUrl: "/admin/login" })}
-            className="text-sm text-slate-400 hover:text-white transition-colors px-2 py-2 -mr-2"
-          >
-            Sign out
-          </button>
+          <div className="flex items-center gap-1 -mr-2">
+            <ThemeToggle />
+            <button
+              onClick={() => signOut({ callbackUrl: "/admin/login" })}
+              className="text-sm text-slate-400 hover:text-white transition-colors px-2 py-2"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
 
         {/* Nav links: even grid on phones so nothing gets cut off, inline pills from sm: up */}

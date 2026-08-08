@@ -10,7 +10,7 @@ export function BookingForm({ slotId }: { slotId: number }) {
   return (
     <form action={formAction} className="space-y-4">
       <div>
-        <label htmlFor="clientName" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="clientName" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
           Full name
         </label>
         <input
@@ -19,12 +19,12 @@ export function BookingForm({ slotId }: { slotId: number }) {
           type="text"
           autoComplete="name"
           required
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
         />
       </div>
 
       <div>
-        <label htmlFor="clientEmail" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="clientEmail" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
           Email address
         </label>
         <input
@@ -33,12 +33,12 @@ export function BookingForm({ slotId }: { slotId: number }) {
           type="email"
           autoComplete="email"
           required
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
         />
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg px-3 py-2">
           {error}
         </p>
       )}

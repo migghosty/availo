@@ -24,7 +24,7 @@ export function DeleteSlotButton({ slotId }: { slotId: number }) {
     <button
       onClick={handleDelete}
       disabled={loading}
-      className="inline-block -m-2 p-2 text-sm text-red-500 hover:text-red-700 disabled:opacity-50 transition-colors"
+      className="inline-block -m-2 p-2 text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 disabled:opacity-50 transition-colors"
     >
       {loading ? "Deleting…" : "Delete"}
     </button>
