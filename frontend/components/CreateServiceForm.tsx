@@ -39,18 +39,18 @@ export function CreateServiceForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="sm:w-16">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Icon</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Icon</label>
           <input
             type="text"
             value={emoji}
             onChange={(e) => setEmoji(e.target.value)}
             placeholder="✂️"
             maxLength={8}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 sm:py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Name</label>
           <input
             type="text"
             value={name}
@@ -58,11 +58,11 @@ export function CreateServiceForm() {
             placeholder="Haircut"
             required
             maxLength={60}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
         <div className="sm:w-28">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Price ($)</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Price ($)</label>
           <input
             type="number"
             value={price}
@@ -71,7 +71,7 @@ export function CreateServiceForm() {
             min="0"
             step="0.01"
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
       </div>
@@ -84,7 +84,7 @@ export function CreateServiceForm() {
         {submitting ? "Adding…" : "Add Service"}
       </button>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
     </form>
   );
 }

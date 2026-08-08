@@ -12,26 +12,26 @@ export default async function SettingsPage() {
     <div className="max-w-lg space-y-8">
       <div>
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-800">Settings</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Settings</h1>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
             Configure your booking preferences.
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6">
           <SettingsForm currentDuration={duration} />
         </div>
       </div>
 
       <div>
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-slate-800">Password</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Password</h2>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
             Change your admin login password.
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6">
           <ChangePasswordForm />
         </div>
       </div>
