@@ -37,8 +37,8 @@ export function CreateServiceForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex gap-3">
-        <div className="w-16">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="sm:w-16">
           <label className="block text-sm font-medium text-gray-700 mb-1">Icon</label>
           <input
             type="text"
@@ -46,7 +46,7 @@ export function CreateServiceForm() {
             onChange={(e) => setEmoji(e.target.value)}
             placeholder="✂️"
             maxLength={8}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 sm:py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
         <div className="flex-1">
@@ -58,10 +58,10 @@ export function CreateServiceForm() {
             placeholder="Haircut"
             required
             maxLength={60}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
-        <div className="w-28">
+        <div className="sm:w-28">
           <label className="block text-sm font-medium text-gray-700 mb-1">Price ($)</label>
           <input
             type="number"
@@ -71,7 +71,7 @@ export function CreateServiceForm() {
             min="0"
             step="0.01"
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
       </div>
