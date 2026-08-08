@@ -59,19 +59,19 @@ export function ServiceListItem({ service }: { service: Service }) {
     return (
       <form
         onSubmit={handleSave}
-        className="flex flex-wrap items-end gap-3 px-5 py-4 sm:px-6 bg-amber-50/50"
+        className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 px-5 py-4 sm:px-6 bg-amber-50/50"
       >
-        <div className="w-16">
+        <div className="sm:w-16">
           <label className="block text-xs font-medium text-gray-500 mb-1">Icon</label>
           <input
             type="text"
             value={emoji}
             onChange={(e) => setEmoji(e.target.value)}
             maxLength={8}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 sm:py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
-        <div className="flex-1 min-w-[8rem]">
+        <div className="flex-1 sm:min-w-[8rem]">
           <label className="block text-xs font-medium text-gray-500 mb-1">Name</label>
           <input
             type="text"
@@ -79,10 +79,10 @@ export function ServiceListItem({ service }: { service: Service }) {
             onChange={(e) => setName(e.target.value)}
             required
             maxLength={60}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
-        <div className="w-28">
+        <div className="sm:w-28">
           <label className="block text-xs font-medium text-gray-500 mb-1">Price ($)</label>
           <input
             type="number"
@@ -91,21 +91,21 @@ export function ServiceListItem({ service }: { service: Service }) {
             min="0"
             step="0.01"
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
         <div className="flex gap-2">
           <button
             type="submit"
             disabled={saving}
-            className="bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-60"
+            className="flex-1 sm:flex-none bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-2.5 sm:py-2 rounded-lg transition-colors disabled:opacity-60"
           >
             {saving ? "Saving…" : "Save"}
           </button>
           <button
             type="button"
             onClick={() => setEditing(false)}
-            className="text-sm text-gray-500 hover:text-gray-700 px-2 py-2"
+            className="text-sm text-gray-500 hover:text-gray-700 px-2 py-2.5 sm:py-2"
           >
             Cancel
           </button>
