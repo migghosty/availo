@@ -1,13 +1,16 @@
 import Link from "next/link";
+import { db } from "@/lib/db";
 
-const services = [
-  { emoji: "✂️", name: "Haircut", price: "$25" },
-  { emoji: "✨", name: "Eyebrows", price: "$10" },
-  { emoji: "🪒", name: "Beard", price: "$20" },
-  { emoji: "💈", name: "Hair & Beard", price: "$40" },
-];
+export const dynamic = "force-dynamic";
 
-export default function LandingPage() {
+function formatPrice(priceCents: number) {
+  const dollars = priceCents / 100;
+  return `$${dollars % 1 === 0 ? dollars.toFixed(0) : dollars.toFixed(2)}`;
+}
+
+export default async function LandingPage() {
+  const services = await db.service.findMany({ orderBy: { id: "asc" } });
+
   return (
     <div>
       {/* Hero */}
@@ -27,25 +30,29 @@ export default function LandingPage() {
       </div>
 
       {/* Services */}
-      <div className="mt-2">
-        <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
-          Services
-        </h2>
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-          {services.map((service) => (
-            <div
-              key={service.name}
-              className="flex items-center justify-between px-5 py-4 sm:px-6"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-2xl" aria-hidden>{service.emoji}</span>
-                <span className="font-medium text-slate-700">{service.name}</span>
+      {services.length > 0 && (
+        <div className="mt-2">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">
+            Services
+          </h2>
+          <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
+            {services.map((service) => (
+              <div
+                key={service.id}
+                className="flex items-center justify-between px-5 py-4 sm:px-6"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl" aria-hidden>{service.emoji}</span>
+                  <span className="font-medium text-slate-700">{service.name}</span>
+                </div>
+                <span className="text-amber-600 font-semibold">
+                  {formatPrice(service.priceCents)}
+                </span>
               </div>
-              <span className="text-amber-600 font-semibold">{service.price}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* CTA footer */}
       <div className="mt-10 text-center">

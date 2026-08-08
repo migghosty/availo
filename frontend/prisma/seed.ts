@@ -29,7 +29,23 @@ async function seedSettings() {
   console.log("Settings seeded: 30-minute slots.");
 }
 
+async function seedServices() {
+  const count = await db.service.count();
+  if (count > 0) return;
+
+  await db.service.createMany({
+    data: [
+      { name: "Haircut", emoji: "✂️", priceCents: 2500 },
+      { name: "Eyebrows", emoji: "✨", priceCents: 1000 },
+      { name: "Beard", emoji: "🪒", priceCents: 2000 },
+      { name: "Hair & Beard", emoji: "💈", priceCents: 4000 },
+    ],
+  });
+  console.log("Services seeded: Haircut, Eyebrows, Beard, Hair & Beard.");
+}
+
 main()
   .then(() => seedSettings())
+  .then(() => seedServices())
   .catch(console.error)
   .finally(() => db.$disconnect());

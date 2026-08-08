@@ -35,6 +35,7 @@ export function AdminNav() {
         <div className="flex items-center gap-1 flex-1 overflow-x-auto">
           {navItem("/admin/dashboard", "Dashboard")}
           {navItem("/admin/slots/new", "Add Slots")}
+          {navItem("/admin/services", "Services")}
           {navItem("/admin/settings", "Settings")}
         </div>
         <button
