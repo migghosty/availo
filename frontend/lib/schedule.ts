@@ -68,6 +68,44 @@ export function weekdayOfDateKey(dateKey: string): number {
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 }
 
+/*
+ * Month keys ("YYYY-MM") drive the booking calendar grid. Like date keys they
+ * describe a calendar position rather than an instant, so all the arithmetic
+ * goes through Date.UTC and never touches the runtime's local timezone.
+ */
+
+/** "2026-08-12" → "2026-08" */
+export function monthKeyOf(dateKey: string): string {
+  return dateKey.slice(0, 7);
+}
+
+/** "2026-08" → "2026-08-01" */
+export function firstDateKeyOfMonth(monthKey: string): string {
+  return `${monthKey}-01`;
+}
+
+/** "2026-08" → 31. Day 0 of the *next* month is the last day of this one. */
+export function daysInMonth(monthKey: string): number {
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/** "2026-12" + 1 → "2027-01" */
+export function addMonthsToMonthKey(monthKey: string, months: number): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1 + months, 1)).toISOString().slice(0, 7);
+}
+
+/** "2026-08" → "August 2026" */
+export function formatMonthLabel(monthKey: string): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(Date.UTC(year, month - 1, 1)));
+}
+
 /**
  * Validates and normalizes a set of windows for a single day: each must be a
  * well-formed, non-empty range within the day, and none may overlap another.

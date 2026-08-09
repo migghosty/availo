@@ -12,9 +12,14 @@ import {
   DAY_NAMES,
   MINUTES_IN_DAY,
   WEEK_ORDER,
+  addMonthsToMonthKey,
+  daysInMonth,
+  firstDateKeyOfMonth,
   formatMinutes,
+  formatMonthLabel,
   formatWindow,
   minutesToTimeInput,
+  monthKeyOf,
   normalizeWindows,
   timeInputToMinutes,
   weekdayOfDateKey,
@@ -95,6 +100,63 @@ describe("weekdayOfDateKey", () => {
     expect(WEEK_ORDER).toEqual([1, 2, 3, 4, 5, 6, 0]);
     expect(DAY_NAMES[WEEK_ORDER[0]]).toBe("Monday");
     expect(DAY_NAMES[WEEK_ORDER[6]]).toBe("Sunday");
+  });
+});
+
+describe("month keys", () => {
+  it("derives a month key from a date key", () => {
+    expect(monthKeyOf("2026-08-12")).toBe("2026-08");
+    expect(monthKeyOf("2026-01-01")).toBe("2026-01");
+  });
+
+  it("builds the first date key of a month", () => {
+    expect(firstDateKeyOfMonth("2026-08")).toBe("2026-08-01");
+  });
+
+  it("round-trips a first-of-month through monthKeyOf", () => {
+    expect(monthKeyOf(firstDateKeyOfMonth("2026-08"))).toBe("2026-08");
+  });
+
+  it("counts the days in a month", () => {
+    expect(daysInMonth("2026-08")).toBe(31);
+    expect(daysInMonth("2026-04")).toBe(30);
+    expect(daysInMonth("2026-02")).toBe(28);
+  });
+
+  it("handles leap years", () => {
+    expect(daysInMonth("2028-02")).toBe(29);
+    // Centuries are only leap years when divisible by 400.
+    expect(daysInMonth("2000-02")).toBe(29);
+    expect(daysInMonth("2100-02")).toBe(28);
+  });
+
+  it("adds months, rolling over the year boundary", () => {
+    expect(addMonthsToMonthKey("2026-08", 1)).toBe("2026-09");
+    expect(addMonthsToMonthKey("2026-12", 1)).toBe("2027-01");
+    expect(addMonthsToMonthKey("2026-01", -1)).toBe("2025-12");
+    expect(addMonthsToMonthKey("2026-08", 0)).toBe("2026-08");
+  });
+
+  it("stays consistent when stepping a full year in either direction", () => {
+    let key = "2026-08";
+    for (let i = 0; i < 12; i++) key = addMonthsToMonthKey(key, 1);
+    expect(key).toBe("2027-08");
+
+    for (let i = 0; i < 12; i++) key = addMonthsToMonthKey(key, -1);
+    expect(key).toBe("2026-08");
+  });
+
+  it("formats a month for display", () => {
+    expect(formatMonthLabel("2026-08")).toBe("August 2026");
+    expect(formatMonthLabel("2027-01")).toBe("January 2027");
+  });
+
+  it("gives the leading blank count for a calendar grid", () => {
+    // A Sunday-first grid pads by the weekday index of the 1st.
+    // Aug 1 2026 is a Saturday, so the row starts with six blanks.
+    expect(weekdayOfDateKey(firstDateKeyOfMonth("2026-08"))).toBe(6);
+    // Nov 1 2026 is a Sunday — no padding at all.
+    expect(weekdayOfDateKey(firstDateKeyOfMonth("2026-11"))).toBe(0);
   });
 });
 
