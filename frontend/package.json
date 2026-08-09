@@ -11,6 +11,10 @@
     "start": "next start",
     "lint": "eslint",
     "verify:availability": "tsx scripts/verify-availability.ts",
+    "db:status": "prisma migrate status",
+    "db:migrate": "tsx scripts/guard-dev-db.ts && prisma migrate dev",
+    "db:seed": "tsx scripts/guard-dev-db.ts && prisma db seed",
+    "db:reset": "tsx scripts/guard-dev-db.ts && prisma migrate reset",
     "postinstall": "prisma generate"
   },
   "dependencies": {
