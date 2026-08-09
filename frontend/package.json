@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "verify:availability": "tsx scripts/verify-availability.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

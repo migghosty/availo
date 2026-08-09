@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import { notFound } from "next/navigation";
 import Link from "next/link";
 import { CancelForm } from "./CancelForm";
 import { BUSINESS_TIMEZONE } from "@/lib/timezone";
@@ -25,7 +24,6 @@ export default async function CancelPage({
 
   const booking = await db.booking.findUnique({
     where: { cancelToken },
-    include: { slot: true },
   });
 
   if (!booking) {
@@ -56,12 +54,12 @@ export default async function CancelPage({
           <div className="flex justify-between">
             <dt className="text-gray-500 dark:text-slate-400">Date &amp; time</dt>
             <dd className="font-medium text-slate-700 dark:text-slate-200">
-              {formatDateTime(booking.slot.startTime)}
+              {formatDateTime(booking.startTime)}
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-gray-500 dark:text-slate-400">Duration</dt>
-            <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.slot.durationMinutes} min</dd>
+            <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.durationMinutes} min</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-gray-500 dark:text-slate-400">Name</dt>

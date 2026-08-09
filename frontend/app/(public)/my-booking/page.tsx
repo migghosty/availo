@@ -80,13 +80,13 @@ export default async function MyBookingPage({
                     <div className="flex justify-between">
                       <dt className="text-gray-500 dark:text-slate-400">Date &amp; time</dt>
                       <dd className="font-medium text-slate-700 dark:text-slate-200 text-right">
-                        {formatDateTime(booking.slot.startTime)}
+                        {formatDateTime(booking.startTime)}
                       </dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-gray-500 dark:text-slate-400">Duration</dt>
                       <dd className="font-medium text-slate-700 dark:text-slate-200">
-                        {booking.slot.durationMinutes} min
+                        {booking.durationMinutes} min
                       </dd>
                     </div>
                     <div className="flex justify-between">
@@ -117,9 +117,8 @@ async function fetchBookings(email: string) {
   return db.booking.findMany({
     where: {
       clientEmail: email,
-      slot: { startTime: { gte: new Date() } },
+      startTime: { gte: new Date() },
     },
-    include: { slot: true },
-    orderBy: { slot: { startTime: "asc" } },
+    orderBy: { startTime: "asc" },
   });
 }

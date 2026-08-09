@@ -3,8 +3,8 @@
 import { useActionState } from "react";
 import { bookSlotAction } from "./actions";
 
-export function BookingForm({ slotId }: { slotId: number }) {
-  const boundAction = bookSlotAction.bind(null, slotId);
+export function BookingForm({ startMs }: { startMs: number }) {
+  const boundAction = bookSlotAction.bind(null, startMs);
   const [error, formAction, isPending] = useActionState(boundAction, null);
 
   return (

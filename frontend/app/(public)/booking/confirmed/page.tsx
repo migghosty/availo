@@ -26,7 +26,6 @@ export default async function BookingConfirmedPage({
 
   const booking = await db.booking.findUnique({
     where: { cancelToken: token },
-    include: { slot: true },
   });
 
   if (!booking) notFound();
@@ -48,12 +47,12 @@ export default async function BookingConfirmedPage({
           <div className="flex justify-between">
             <dt className="text-gray-500 dark:text-slate-400">Date &amp; time</dt>
             <dd className="font-medium text-slate-700 dark:text-slate-200">
-              {formatDateTime(booking.slot.startTime)}
+              {formatDateTime(booking.startTime)}
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-gray-500 dark:text-slate-400">Duration</dt>
-            <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.slot.durationMinutes} min</dd>
+            <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.durationMinutes} min</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-gray-500 dark:text-slate-400">Name</dt>

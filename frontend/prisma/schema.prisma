@@ -14,28 +14,63 @@ model AdminUser {
   createdAt    DateTime @default(now())
 }
 
-model Slot {
-  id              Int      @id @default(autoincrement())
-  startTime       DateTime
-  durationMinutes Int
-  isAvailable     Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  booking         Booking?
-}
-
+/// A booked appointment. Carries its own start time and duration — availability
+/// is computed from the schedule rather than stored as pre-made slot rows, so a
+/// booking is the only thing that needs to be materialized.
 model Booking {
-  id          Int      @id @default(autoincrement())
-  slotId      Int      @unique
-  clientName  String
-  clientEmail String
-  cancelToken String   @unique
-  createdAt   DateTime @default(now())
-  slot        Slot     @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  id              Int      @id @default(autoincrement())
+  startTime       DateTime @unique
+  durationMinutes Int
+  clientName      String
+  clientEmail     String
+  cancelToken     String   @unique
+  createdAt       DateTime @default(now())
+
+  @@index([startTime])
 }
 
 model Settings {
-  id              Int @id @default(1)
-  slotDurationMin Int @default(30)
+  id                 Int @id @default(1)
+  /// How long an appointment lasts — a booking blocks this much time.
+  slotDurationMin    Int @default(30)
+  /// Granularity of offered start times (e.g. 15 => 4:00, 4:15, 4:30 …).
+  slotIntervalMin    Int @default(15)
+  /// How many days ahead clients may book.
+  bookingHorizonDays Int @default(30)
+}
+
+/// Recurring weekly availability. One row per open window per weekday, so a day
+/// can have several windows (e.g. 9am–12pm and 2pm–5pm). A weekday with no rows
+/// is closed.
+model ScheduleRule {
+  id          Int @id @default(autoincrement())
+  /// 0 = Sunday … 6 = Saturday
+  dayOfWeek   Int
+  /// Minutes from midnight in BUSINESS_TIMEZONE.
+  startMinute Int
+  endMinute   Int
+
+  @@index([dayOfWeek])
+}
+
+/// A one-off exception for a specific calendar date. Fully replaces that day's
+/// weekly rules: either closed outright, or its own set of windows.
+model ScheduleOverride {
+  id       Int                      @id @default(autoincrement())
+  /// YYYY-MM-DD as observed in BUSINESS_TIMEZONE.
+  date     String                   @unique
+  isClosed Boolean                  @default(false)
+  windows  ScheduleOverrideWindow[]
+}
+
+model ScheduleOverrideWindow {
+  id          Int              @id @default(autoincrement())
+  overrideId  Int
+  startMinute Int
+  endMinute   Int
+  override    ScheduleOverride @relation(fields: [overrideId], references: [id], onDelete: Cascade)
+
+  @@index([overrideId])
 }
 
 model Service {

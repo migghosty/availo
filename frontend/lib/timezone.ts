@@ -1,16 +1,32 @@
 export const BUSINESS_TIMEZONE = "America/Los_Angeles";
 
+/**
+ * Constructing an Intl.DateTimeFormat is comparatively expensive, and computed
+ * availability resolves hundreds of wall times per page render. Formatters are
+ * stateless, so cache one per timezone.
+ */
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+
+function wallClockFormatter(timeZone: string): Intl.DateTimeFormat {
+  let formatter = formatterCache.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    formatterCache.set(timeZone, formatter);
+  }
+  return formatter;
+}
+
 function offsetPartsToUtc(instant: Date, timeZone: string): Date {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).formatToParts(instant);
+  const parts = wallClockFormatter(timeZone).formatToParts(instant);
 
   const map: Record<string, string> = {};
   for (const part of parts) map[part.type] = part.value;

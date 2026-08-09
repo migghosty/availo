@@ -1,51 +1,33 @@
 import { db } from "@/lib/db";
+import { createBooking } from "@/lib/booking";
 import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const { slotId, clientName, clientEmail } = await req.json();
+  const { startTime, clientName, clientEmail } = await req.json();
 
-  if (!slotId || !clientName?.trim() || !clientEmail?.trim()) {
-    return Response.json({ error: "slotId, clientName, and clientEmail are required" }, { status: 400 });
+  if (!startTime || !clientName?.trim() || !clientEmail?.trim()) {
+    return Response.json(
+      { error: "startTime, clientName, and clientEmail are required" },
+      { status: 400 }
+    );
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail)) {
-    return Response.json({ error: "Invalid email address" }, { status: 400 });
+  const start = new Date(startTime);
+  if (Number.isNaN(start.getTime())) {
+    return Response.json({ error: "Invalid startTime" }, { status: 400 });
   }
 
-  let booking;
-  try {
-    await db.$transaction(async (tx) => {
-      const slot = await tx.slot.findUnique({
-        where: { id: Number(slotId) },
-        include: { booking: true },
-      });
+  const result = await createBooking({ start, clientName, clientEmail });
 
-      if (!slot || !slot.isAvailable || slot.booking) {
-        throw new Error("SLOT_UNAVAILABLE");
-      }
-
-      const cancelToken = crypto.randomUUID();
-
-      booking = await tx.booking.create({
-        data: {
-          slotId: Number(slotId),
-          clientName: clientName.trim(),
-          clientEmail: clientEmail.trim().toLowerCase(),
-          cancelToken,
-        },
-      });
-
-      await tx.slot.update({
-        where: { id: Number(slotId) },
-        data: { isAvailable: false },
-      });
-    });
-  } catch (error) {
-    if (error instanceof Error && error.message === "SLOT_UNAVAILABLE") {
-      return Response.json({ error: "Slot is no longer available" }, { status: 409 });
-    }
-    return Response.json({ error: "Internal server error" }, { status: 500 });
+  if (!result.ok) {
+    const status =
+      result.code === "UNAVAILABLE" ? 409 : result.code === "ERROR" ? 500 : 400;
+    return Response.json({ error: result.message }, { status });
   }
+
+  const booking = await db.booking.findUnique({
+    where: { cancelToken: result.cancelToken },
+  });
 
   return Response.json(booking, { status: 201 });
 }
