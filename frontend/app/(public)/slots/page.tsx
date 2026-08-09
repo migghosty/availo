@@ -1,16 +1,22 @@
-import { db } from "@/lib/db";
 import Link from "next/link";
-import { BUSINESS_TIMEZONE } from "@/lib/timezone";
+import { computeAvailability } from "@/lib/availability";
+import { loadAvailabilityInputs } from "@/lib/scheduleData";
+import { BUSINESS_TIMEZONE, todayInTimezone, addDaysToDateKey } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
-function formatDate(date: Date) {
+function formatDayHeading(dateKey: string) {
+  const today = todayInTimezone();
+  if (dateKey === today) return "Today";
+  if (dateKey === addDaysToDateKey(today, 1)) return "Tomorrow";
+
+  const [year, month, day] = dateKey.split("-").map(Number);
   return new Intl.DateTimeFormat("en-US", {
-    timeZone: BUSINESS_TIMEZONE,
+    timeZone: "UTC",
     weekday: "long",
     month: "long",
     day: "numeric",
-  }).format(new Date(date));
+  }).format(new Date(Date.UTC(year, month - 1, day, 12)));
 }
 
 function formatTime(date: Date) {
@@ -19,56 +25,46 @@ function formatTime(date: Date) {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-  }).format(new Date(date));
+  }).format(date);
 }
 
-export default async function HomePage() {
-  const slots = await db.slot.findMany({
-    where: { startTime: { gte: new Date() }, isAvailable: true },
-    orderBy: { startTime: "asc" },
-  });
-
-  const grouped = new Map<string, typeof slots>();
-  for (const slot of slots) {
-    const key = formatDate(slot.startTime);
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key)!.push(slot);
-  }
+export default async function SlotsPage() {
+  const inputs = await loadAvailabilityInputs();
+  const days = computeAvailability(inputs);
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Book an Appointment</h1>
-        <p className="text-gray-500 dark:text-slate-400 mt-1">Pick a time that works for you.</p>
+        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">
+          Book an Appointment
+        </h1>
+        <p className="text-gray-500 dark:text-slate-400 mt-1">
+          Pick a time that works for you.
+        </p>
       </div>
 
-      {grouped.size === 0 ? (
+      {days.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-12 text-center">
-          <p className="text-gray-500 dark:text-slate-400">No available slots right now. Check back soon!</p>
+          <p className="text-gray-500 dark:text-slate-400">
+            No available times right now. Check back soon!
+          </p>
         </div>
       ) : (
         <div className="space-y-7">
-          {Array.from(grouped.entries()).map(([dateLabel, dateSlots]) => (
-            <section key={dateLabel}>
+          {days.map((day) => (
+            <section key={day.dateKey}>
               <h2 className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-3">
-                {dateLabel}
+                {formatDayHeading(day.dateKey)}
               </h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {dateSlots.map((slot) => (
+              {/* Time pills: dense grid so a long day stays scannable on a phone */}
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                {day.starts.map((start) => (
                   <Link
-                    key={slot.id}
-                    href={`/book/${slot.id}`}
-                    className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 px-5 py-4 flex items-center justify-between hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-sm transition-all group"
+                    key={start.getTime()}
+                    href={`/book/${start.getTime()}`}
+                    className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-800 px-2 py-3 text-center text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-amber-400 dark:hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 hover:shadow-sm transition-all"
                   >
-                    <div>
-                      <p className="font-semibold text-slate-700 dark:text-slate-200">
-                        {formatTime(slot.startTime)}
-                      </p>
-                      <p className="text-sm text-gray-400 dark:text-slate-500">{slot.durationMinutes} min</p>
-                    </div>
-                    <span className="text-amber-500 dark:text-amber-400 text-sm font-medium group-hover:translate-x-1 transition-transform">
-                      Book →
-                    </span>
+                    {formatTime(start)}
                   </Link>
                 ))}
               </div>

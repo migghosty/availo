@@ -7,7 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV_ITEMS = [
   { href: "/admin/dashboard", label: "Dashboard" },
-  { href: "/admin/slots/new", label: "Add Slots" },
+  { href: "/admin/schedule", label: "Schedule" },
   { href: "/admin/services", label: "Services" },
   { href: "/admin/settings", label: "Settings" },
 ];

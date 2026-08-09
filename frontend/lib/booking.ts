@@ -1,0 +1,150 @@
+/**
+ * Booking creation, shared by the booking form's Server Action and the REST
+ * endpoint so both enforce identical rules.
+ *
+ * Concurrency note: with start times offered every `slotIntervalMin` but
+ * appointments lasting `slotDurationMin`, two clients can pick *different*
+ * start times that still overlap (4:30 and 4:45 with 30-minute appointments).
+ * A unique index on `startTime` alone wouldn't catch that, so the availability
+ * re-check runs inside a Serializable transaction — Postgres then aborts one of
+ * two conflicting writers rather than letting both through.
+ */
+
+import { db } from "./db";
+import { isStartBookable } from "./availability";
+import { loadAvailabilityInputs } from "./scheduleData";
+
+export type BookingFailure =
+  | "INVALID_NAME"
+  | "INVALID_EMAIL"
+  | "UNAVAILABLE"
+  | "ERROR";
+
+export type BookingResult =
+  | { ok: true; cancelToken: string }
+  | { ok: false; code: BookingFailure; message: string };
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Prisma error code for a unique-constraint violation. */
+const UNIQUE_VIOLATION = "P2002";
+
+/** Prisma error code for a write conflict / deadlock — i.e. Postgres SQLSTATE 40001. */
+const SERIALIZATION_FAILURE = "P2034";
+
+/**
+ * Serializable isolation aborts transactions that *might* not be serializable,
+ * not only those that provably conflict. Two clients booking genuinely
+ * non-overlapping times still both scan Booking and both insert into it, which
+ * is enough of a read/write dependency for Postgres to abort one of them.
+ *
+ * That is a "retry me", not a "the slot is taken" — reporting it as UNAVAILABLE
+ * would tell a client a free time was booked. On retry the re-read sees whatever
+ * actually committed, so a real conflict still resolves to UNAVAILABLE.
+ */
+const MAX_ATTEMPTS = 3;
+
+function prismaErrorCode(error: unknown): string | null {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof (error as { code: unknown }).code === "string"
+  ) {
+    return (error as { code: string }).code;
+  }
+  return null;
+}
+
+export async function createBooking({
+  start,
+  clientName,
+  clientEmail,
+}: {
+  start: Date;
+  clientName: string;
+  clientEmail: string;
+}): Promise<BookingResult> {
+  const name = clientName.trim();
+  const email = clientEmail.trim().toLowerCase();
+
+  if (name.length < 2) {
+    return {
+      ok: false,
+      code: "INVALID_NAME",
+      message: "Please enter your full name (at least 2 characters).",
+    };
+  }
+
+  if (!EMAIL_PATTERN.test(email)) {
+    return {
+      ok: false,
+      code: "INVALID_EMAIL",
+      message: "A valid email address is required.",
+    };
+  }
+
+  const cancelToken = crypto.randomUUID();
+
+  const unavailable: BookingResult = {
+    ok: false,
+    code: "UNAVAILABLE",
+    message: "Sorry, that time is no longer available. Please choose another.",
+  };
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      await db.$transaction(
+        async (tx) => {
+          // Read inside the transaction so these reads take part in Postgres'
+          // serializable conflict detection.
+          const inputs = await loadAvailabilityInputs(tx);
+
+          if (!isStartBookable({ start, ...inputs })) {
+            throw new Error("UNAVAILABLE");
+          }
+
+          await tx.booking.create({
+            data: {
+              startTime: start,
+              durationMinutes: inputs.config.slotDurationMin,
+              clientName: name,
+              clientEmail: email,
+              cancelToken,
+            },
+          });
+        },
+        { isolationLevel: "Serializable" }
+      );
+
+      return { ok: true, cancelToken };
+    } catch (error) {
+      // The availability re-check said no — a definite answer, never retried.
+      if (error instanceof Error && error.message === "UNAVAILABLE") {
+        return unavailable;
+      }
+
+      const code = prismaErrorCode(error);
+
+      // Someone committed this exact start time first.
+      if (code === UNIQUE_VIOLATION) {
+        return unavailable;
+      }
+
+      if (code === SERIALIZATION_FAILURE) {
+        if (attempt < MAX_ATTEMPTS) continue;
+        // Still losing after several attempts: treat as taken rather than
+        // reporting a generic failure.
+        return unavailable;
+      }
+
+      return {
+        ok: false,
+        code: "ERROR",
+        message: "Something went wrong. Please try again.",
+      };
+    }
+  }
+
+  return unavailable;
+}
