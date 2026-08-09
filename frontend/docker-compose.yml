@@ -1,12 +1,34 @@
-# Throwaway Postgres for the integration test tier.
+# Local Postgres for development and for the integration test tier.
 #
-# Deliberately NOT the Neon dev branch: these tests truncate tables between
-# cases, and anything shared would eventually be reset out from under someone.
+#   docker compose up -d dev-db     # the database `npm run dev` talks to
+#   docker compose up -d --wait     # both (npm run test:integration does this)
+#   docker compose down             # stop, keeping dev data
+#   docker compose down -v          # stop and delete dev data too
 #
-#   docker compose up -d --wait     # start (npm run test:integration does this)
-#   docker compose down -v          # stop and delete the volume
+# Two separate databases on purpose: the test one is truncated between cases,
+# so sharing it with development would wipe your working data mid-test-run.
 
 services:
+  # Development database. Persistent — the schedule and services you set up
+  # here should survive a restart.
+  dev-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: availo
+      POSTGRES_PASSWORD: availo
+      POSTGRES_DB: availo_dev
+    # 55433 so it collides with neither a local Postgres on 5432 nor test-db.
+    ports:
+      - "55433:5432"
+    volumes:
+      - dev-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U availo -d availo_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+
   test-db:
     image: postgres:17-alpine
     environment:
@@ -24,3 +46,6 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+
+volumes:
+  dev-db-data:
