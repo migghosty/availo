@@ -26,17 +26,34 @@ export type BookingResult =
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Prisma: unique violation, and write-conflict/deadlock (serialization failure). */
-const CONFLICT_CODES = new Set(["P2002", "P2034"]);
+/** Prisma error code for a unique-constraint violation. */
+const UNIQUE_VIOLATION = "P2002";
 
-function isConflict(error: unknown): boolean {
-  return (
+/** Prisma error code for a write conflict / deadlock — i.e. Postgres SQLSTATE 40001. */
+const SERIALIZATION_FAILURE = "P2034";
+
+/**
+ * Serializable isolation aborts transactions that *might* not be serializable,
+ * not only those that provably conflict. Two clients booking genuinely
+ * non-overlapping times still both scan Booking and both insert into it, which
+ * is enough of a read/write dependency for Postgres to abort one of them.
+ *
+ * That is a "retry me", not a "the slot is taken" — reporting it as UNAVAILABLE
+ * would tell a client a free time was booked. On retry the re-read sees whatever
+ * actually committed, so a real conflict still resolves to UNAVAILABLE.
+ */
+const MAX_ATTEMPTS = 3;
+
+function prismaErrorCode(error: unknown): string | null {
+  if (
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
-    typeof (error as { code: unknown }).code === "string" &&
-    CONFLICT_CODES.has((error as { code: string }).code)
-  );
+    typeof (error as { code: unknown }).code === "string"
+  ) {
+    return (error as { code: string }).code;
+  }
+  return null;
 }
 
 export async function createBooking({
@@ -69,52 +86,65 @@ export async function createBooking({
 
   const cancelToken = crypto.randomUUID();
 
-  try {
-    await db.$transaction(
-      async (tx) => {
-        // Read inside the transaction so these reads take part in Postgres'
-        // serializable conflict detection.
-        const inputs = await loadAvailabilityInputs(tx);
+  const unavailable: BookingResult = {
+    ok: false,
+    code: "UNAVAILABLE",
+    message: "Sorry, that time is no longer available. Please choose another.",
+  };
 
-        if (!isStartBookable({ start, ...inputs })) {
-          throw new Error("UNAVAILABLE");
-        }
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      await db.$transaction(
+        async (tx) => {
+          // Read inside the transaction so these reads take part in Postgres'
+          // serializable conflict detection.
+          const inputs = await loadAvailabilityInputs(tx);
 
-        await tx.booking.create({
-          data: {
-            startTime: start,
-            durationMinutes: inputs.config.slotDurationMin,
-            clientName: name,
-            clientEmail: email,
-            cancelToken,
-          },
-        });
-      },
-      { isolationLevel: "Serializable" }
-    );
-  } catch (error) {
-    if (error instanceof Error && error.message === "UNAVAILABLE") {
+          if (!isStartBookable({ start, ...inputs })) {
+            throw new Error("UNAVAILABLE");
+          }
+
+          await tx.booking.create({
+            data: {
+              startTime: start,
+              durationMinutes: inputs.config.slotDurationMin,
+              clientName: name,
+              clientEmail: email,
+              cancelToken,
+            },
+          });
+        },
+        { isolationLevel: "Serializable" }
+      );
+
+      return { ok: true, cancelToken };
+    } catch (error) {
+      // The availability re-check said no — a definite answer, never retried.
+      if (error instanceof Error && error.message === "UNAVAILABLE") {
+        return unavailable;
+      }
+
+      const code = prismaErrorCode(error);
+
+      // Someone committed this exact start time first.
+      if (code === UNIQUE_VIOLATION) {
+        return unavailable;
+      }
+
+      if (code === SERIALIZATION_FAILURE) {
+        if (attempt < MAX_ATTEMPTS) continue;
+        // Still losing after several attempts: treat as taken rather than
+        // reporting a generic failure.
+        return unavailable;
+      }
+
       return {
         ok: false,
-        code: "UNAVAILABLE",
-        message: "Sorry, that time is no longer available. Please choose another.",
+        code: "ERROR",
+        message: "Something went wrong. Please try again.",
       };
     }
-
-    if (isConflict(error)) {
-      return {
-        ok: false,
-        code: "UNAVAILABLE",
-        message: "Sorry, that time is no longer available. Please choose another.",
-      };
-    }
-
-    return {
-      ok: false,
-      code: "ERROR",
-      message: "Something went wrong. Please try again.",
-    };
   }
 
-  return { ok: true, cancelToken };
+  return unavailable;
 }

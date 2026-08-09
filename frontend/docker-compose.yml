@@ -1,0 +1,26 @@
+# Throwaway Postgres for the integration test tier.
+#
+# Deliberately NOT the Neon dev branch: these tests truncate tables between
+# cases, and anything shared would eventually be reset out from under someone.
+#
+#   docker compose up -d --wait     # start (npm run test:integration does this)
+#   docker compose down -v          # stop and delete the volume
+
+services:
+  test-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: availo
+      POSTGRES_PASSWORD: availo
+      POSTGRES_DB: availo_test
+    # 55432 so this cannot collide with a Postgres already on 5432.
+    ports:
+      - "55432:5432"
+    # tmpfs: the data never needs to outlive the container, and this is faster.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U availo -d availo_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

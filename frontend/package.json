@@ -10,7 +10,10 @@
     "build": "tsx scripts/preflight-db.ts && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint",
-    "verify:availability": "tsx scripts/verify-availability.ts",
+    "test": "vitest run --project unit",
+    "test:watch": "vitest --project unit",
+    "test:integration": "docker compose up -d --wait && vitest run --project integration",
+    "test:all": "npm run test && npm run test:integration",
     "db:status": "prisma migrate status",
     "db:migrate": "tsx scripts/guard-dev-db.ts && prisma migrate dev",
     "db:seed": "tsx scripts/guard-dev-db.ts && prisma db seed",
@@ -44,6 +47,7 @@
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "tsx": "^4.23.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }
