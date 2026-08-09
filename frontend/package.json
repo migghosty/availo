@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
-    "build": "prisma migrate deploy && next build",
+    "build": "tsx scripts/preflight-db.ts && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint",
     "verify:availability": "tsx scripts/verify-availability.ts",
