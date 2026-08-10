@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { AddToCalendar } from "@/components/AddToCalendar";
+import { getBusinessAddress } from "@/lib/settingsData";
 import { BUSINESS_TIMEZONE } from "@/lib/timezone";
 
 function formatDateTime(date: Date) {
@@ -24,9 +26,10 @@ export default async function BookingConfirmedPage({
 
   if (!token) notFound();
 
-  const booking = await db.booking.findUnique({
-    where: { cancelToken: token },
-  });
+  const [booking, address] = await Promise.all([
+    db.booking.findUnique({ where: { cancelToken: token } }),
+    getBusinessAddress(),
+  ]);
 
   if (!booking) notFound();
 
@@ -62,7 +65,22 @@ export default async function BookingConfirmedPage({
             <dt className="text-gray-500 dark:text-slate-400">Email</dt>
             <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.clientEmail}</dd>
           </div>
+          {/* Stacked rather than the justify-between of the rows above: an
+              address runs to two or three lines, and squeezing it into the
+              right half of a 375px screen wraps it into a mess. */}
+          {address && (
+            <div className="flex flex-col gap-1 pt-1">
+              <dt className="text-gray-500 dark:text-slate-400">Where</dt>
+              <dd className="font-medium text-slate-700 dark:text-slate-200 whitespace-pre-line">
+                {address}
+              </dd>
+            </div>
+          )}
         </dl>
+
+        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-slate-800">
+          <AddToCalendar booking={booking} />
+        </div>
 
         <div className="mt-6 pt-5 border-t border-gray-100 dark:border-slate-800">
           <Link

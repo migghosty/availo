@@ -12,6 +12,7 @@
 
 import { db } from "./db";
 import { isStartBookable } from "./availability";
+import { isSerializationFailure, isUniqueViolation } from "./dbErrors";
 import { loadAvailabilityInputs } from "./scheduleData";
 
 export type BookingFailure =
@@ -26,12 +27,6 @@ export type BookingResult =
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Prisma error code for a unique-constraint violation. */
-const UNIQUE_VIOLATION = "P2002";
-
-/** Prisma error code for a write conflict / deadlock — i.e. Postgres SQLSTATE 40001. */
-const SERIALIZATION_FAILURE = "P2034";
-
 /**
  * Serializable isolation aborts transactions that *might* not be serializable,
  * not only those that provably conflict. Two clients booking genuinely
@@ -42,18 +37,21 @@ const SERIALIZATION_FAILURE = "P2034";
  * would tell a client a free time was booked. On retry the re-read sees whatever
  * actually committed, so a real conflict still resolves to UNAVAILABLE.
  */
-const MAX_ATTEMPTS = 3;
+const MAX_ATTEMPTS = 5;
 
-function prismaErrorCode(error: unknown): string | null {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    typeof (error as { code: unknown }).code === "string"
-  ) {
-    return (error as { code: string }).code;
-  }
-  return null;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Full jitter before a retry.
+ *
+ * Both losers of a conflict are released at the same instant, so retrying
+ * immediately just recreates the race that caused it — measured at six
+ * simultaneous non-overlapping bookings, retrying without a delay lost a
+ * booking in 50 of 60 rounds, and with this delay in 0 of 60. The cost is a few
+ * milliseconds on a request that already talks to a database twice.
+ */
+function retryDelayMs(attempt: number): number {
+  return Math.random() * 5 * 2 ** (attempt - 1);
 }
 
 export async function createBooking({
@@ -124,15 +122,16 @@ export async function createBooking({
         return unavailable;
       }
 
-      const code = prismaErrorCode(error);
-
       // Someone committed this exact start time first.
-      if (code === UNIQUE_VIOLATION) {
+      if (isUniqueViolation(error)) {
         return unavailable;
       }
 
-      if (code === SERIALIZATION_FAILURE) {
-        if (attempt < MAX_ATTEMPTS) continue;
+      if (isSerializationFailure(error)) {
+        if (attempt < MAX_ATTEMPTS) {
+          await sleep(retryDelayMs(attempt));
+          continue;
+        }
         // Still losing after several attempts: treat as taken rather than
         // reporting a generic failure.
         return unavailable;

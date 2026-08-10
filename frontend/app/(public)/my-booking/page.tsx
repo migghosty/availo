@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import Link from "next/link";
+import { AddToCalendar } from "@/components/AddToCalendar";
+import { getBusinessAddress } from "@/lib/settingsData";
 import { BUSINESS_TIMEZONE } from "@/lib/timezone";
 
 function formatDateTime(date: Date) {
@@ -23,9 +25,15 @@ export default async function MyBookingPage({
   const trimmedEmail = email?.trim().toLowerCase() ?? "";
 
   let bookings: Awaited<ReturnType<typeof fetchBookings>> | null = null;
+  // One address for every card, so it's loaded once — and only when there is
+  // actually a lookup to render.
+  let address = "";
 
   if (trimmedEmail) {
-    bookings = await fetchBookings(trimmedEmail);
+    [bookings, address] = await Promise.all([
+      fetchBookings(trimmedEmail),
+      getBusinessAddress(),
+    ]);
   }
 
   return (
@@ -93,7 +101,21 @@ export default async function MyBookingPage({
                       <dt className="text-gray-500 dark:text-slate-400">Name</dt>
                       <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.clientName}</dd>
                     </div>
+                    {/* Stacked, matching the confirmation page: an address runs
+                        to several lines and wraps badly in half a phone width. */}
+                    {address && (
+                      <div className="flex flex-col gap-1 pt-1">
+                        <dt className="text-gray-500 dark:text-slate-400">Where</dt>
+                        <dd className="font-medium text-slate-700 dark:text-slate-200 whitespace-pre-line">
+                          {address}
+                        </dd>
+                      </div>
+                    )}
                   </dl>
+
+                  <div className="mt-5 pt-4 border-t border-gray-100 dark:border-slate-800">
+                    <AddToCalendar booking={booking} />
+                  </div>
 
                   <div className="mt-5 pt-4 border-t border-gray-100 dark:border-slate-800">
                     <Link
