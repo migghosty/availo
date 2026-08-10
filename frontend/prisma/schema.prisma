@@ -37,6 +37,10 @@ model Settings {
   slotIntervalMin    Int @default(15)
   /// How many days ahead clients may book.
   bookingHorizonDays Int @default(30)
+  /// Where appointments happen. Free text (may be multi-line) so the admin can
+  /// write it the way clients would search for it. Empty means "not set", in
+  /// which case calendar events simply carry no location.
+  address            String @default("")
 }
 
 /// Recurring weekly availability. One row per open window per weekday, so a day

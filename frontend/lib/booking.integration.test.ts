@@ -206,6 +206,30 @@ describe("concurrent double-booking", () => {
     expect(await db.booking.count()).toBe(2);
   });
 
+  it("lets a burst of non-overlapping bookings all through", async () => {
+    // The two-client case above is a weak detector: when commit-time conflicts
+    // were being misclassified as fatal, it still passed ~72% of the time.
+    // Six simultaneous bookers failed ~83% of rounds under the same bug, so
+    // this is the case that actually guards the retry path.
+    const starts = Array.from({ length: 6 }, (_, i) =>
+      instantForDateMinute(targetDate, 16 * HOUR + i * 30)
+    );
+
+    const results = await Promise.all(
+      starts.map((start, i) =>
+        createBooking({
+          start,
+          clientName: "Ada Lovelace",
+          clientEmail: `client${i}@example.com`,
+        })
+      )
+    );
+
+    // None of these overlap, so every one of them is genuinely free.
+    expect(results.filter((result) => result.ok)).toHaveLength(starts.length);
+    expect(await db.booking.count()).toBe(starts.length);
+  });
+
   it("rejects the duplicate when both pick the identical start time", async () => {
     const [a, b] = await Promise.all([
       createBooking({ start: at430pm, clientName: "Ada Lovelace", clientEmail: "ada@example.com" }),
