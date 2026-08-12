@@ -8,13 +8,14 @@
 
 import { describe, expect, it } from "vitest";
 
-import { EVENT_TITLE, toCalendarEvent, type BookableEvent } from "./bookingEvent";
+import { toCalendarEvent, type BookableEvent } from "./bookingEvent";
 import { buildIcs } from "./calendar";
 
 const BOOKING: BookableEvent = {
   // 4:30 PM PDT on Wed 12 Aug 2026.
   startTime: new Date("2026-08-12T23:30:00.000Z"),
   durationMinutes: 30,
+  serviceName: "Haircut",
   clientName: "Jamie Smith",
   cancelToken: "11111111-2222-3333-4444-555555555555",
   createdAt: new Date("2026-08-09T18:00:00.000Z"),
@@ -23,9 +24,9 @@ const BOOKING: BookableEvent = {
 const ORIGIN = "https://availo.example.com";
 
 describe("toCalendarEvent", () => {
-  it("carries the booking's own duration, not a global setting", () => {
+  it("carries the booking's own duration, not the service's current one", () => {
     // Booking.durationMinutes is snapshotted at booking time, so an admin
-    // changing slotDurationMin later must not resize a confirmed appointment.
+    // relengthening the service later must not resize a confirmed appointment.
     const event = toCalendarEvent({ ...BOOKING, durationMinutes: 60 }, { origin: ORIGIN });
     expect(event.durationMinutes).toBe(60);
   });
@@ -40,8 +41,15 @@ describe("toCalendarEvent", () => {
     expect(toCalendarEvent(BOOKING, { origin: ORIGIN }).stamp).toEqual(BOOKING.createdAt);
   });
 
-  it("uses the hardcoded business title", () => {
-    expect(toCalendarEvent(BOOKING, { origin: ORIGIN }).title).toBe(EVENT_TITLE);
+  it("names the service in the title", () => {
+    expect(toCalendarEvent(BOOKING, { origin: ORIGIN }).title).toBe("Haircut at Availo");
+  });
+
+  it("falls back to a generic title when the service snapshot is empty", () => {
+    // Bookings made before a service was required carry "".
+    expect(
+      toCalendarEvent({ ...BOOKING, serviceName: "" }, { origin: ORIGIN }).title
+    ).toBe("Appointment at Availo");
   });
 
   it("asks for a one-hour reminder", () => {

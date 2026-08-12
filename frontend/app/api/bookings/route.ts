@@ -3,7 +3,7 @@ import { createBooking } from "@/lib/booking";
 import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const { startTime, clientName, clientEmail } = await req.json();
+  const { startTime, serviceId, clientName, clientEmail } = await req.json();
 
   if (!startTime || !clientName?.trim() || !clientEmail?.trim()) {
     return Response.json(
@@ -17,7 +17,19 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Invalid startTime" }, { status: 400 });
   }
 
-  const result = await createBooking({ start, clientName, clientEmail });
+  // The service decides how long the appointment is, so there's no sensible
+  // default to fall back on.
+  const service = Number(serviceId);
+  if (!Number.isInteger(service)) {
+    return Response.json({ error: "A valid serviceId is required" }, { status: 400 });
+  }
+
+  const result = await createBooking({
+    start,
+    serviceId: service,
+    clientName,
+    clientEmail,
+  });
 
   if (!result.ok) {
     const status =

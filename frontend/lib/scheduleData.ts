@@ -16,7 +16,6 @@ import type {
 import type { PrismaClient } from "@/app/generated/prisma/client";
 
 export const DEFAULT_CONFIG: AvailabilityConfig = {
-  slotDurationMin: 30,
   slotIntervalMin: 15,
   bookingHorizonDays: 30,
 };
@@ -29,7 +28,6 @@ export async function getConfig(client: Db = db): Promise<AvailabilityConfig> {
   if (!settings) return DEFAULT_CONFIG;
 
   return {
-    slotDurationMin: settings.slotDurationMin,
     slotIntervalMin: settings.slotIntervalMin,
     bookingHorizonDays: settings.bookingHorizonDays,
   };
@@ -60,7 +58,9 @@ export async function getOverrides(client: Db = db): Promise<ScheduleOverrideLik
 
 /**
  * Bookings that could conflict with an upcoming candidate. Reaches back a day
- * so a long appointment that started before "now" still blocks correctly.
+ * so a long appointment that started before "now" still blocks correctly —
+ * safe because `MAX_DURATION_MINUTES` in `service.ts` caps any service well
+ * under 24 hours.
  */
 export async function getRelevantBookings(client: Db = db): Promise<BookingLike[]> {
   const from = new Date(Date.now() - 24 * 60 * 60 * 1000);

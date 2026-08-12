@@ -5,11 +5,13 @@ import { redirect } from "next/navigation";
 
 export async function bookSlotAction(
   startMs: number,
+  serviceId: number,
   _prevState: string | null,
   formData: FormData
 ): Promise<string | null> {
   const result = await createBooking({
     start: new Date(startMs),
+    serviceId,
     clientName: (formData.get("clientName") as string) ?? "",
     clientEmail: (formData.get("clientEmail") as string) ?? "",
   });

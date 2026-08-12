@@ -3,11 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { DURATION_OPTIONS } from "@/lib/service";
+
+const DEFAULT_DURATION = 30;
+
 export function CreateServiceForm() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("");
   const [price, setPrice] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState(DEFAULT_DURATION);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +24,7 @@ export function CreateServiceForm() {
     const res = await fetch("/api/services", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, emoji, price }),
+      body: JSON.stringify({ name, emoji, price, durationMinutes }),
     });
 
     setSubmitting(false);
@@ -28,6 +33,7 @@ export function CreateServiceForm() {
       setName("");
       setEmoji("");
       setPrice("");
+      setDurationMinutes(DEFAULT_DURATION);
       router.refresh();
     } else {
       const { error } = await res.json();
@@ -37,7 +43,8 @@ export function CreateServiceForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3">
+      {/* Four fields now, so wrap at sm: rather than crushing them into one row */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
         <div className="sm:w-16">
           <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Icon</label>
           <input
@@ -49,7 +56,7 @@ export function CreateServiceForm() {
             className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 sm:min-w-[8rem]">
           <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Name</label>
           <input
             type="text"
@@ -73,6 +80,28 @@ export function CreateServiceForm() {
             required
             className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
+        </div>
+        {/* A native select beats six pills here: it's one tap on a phone, and
+            this is what decides which start times the service can even use. */}
+        <div className="sm:w-32">
+          <label
+            htmlFor="new-service-duration"
+            className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1"
+          >
+            Length
+          </label>
+          <select
+            id="new-service-duration"
+            value={durationMinutes}
+            onChange={(e) => setDurationMinutes(Number(e.target.value))}
+            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+          >
+            {DURATION_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option} min
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

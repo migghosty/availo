@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { WeeklyScheduleEditor } from "@/components/WeeklyScheduleEditor";
 import { ScheduleOverrides } from "@/components/ScheduleOverrides";
@@ -26,9 +27,16 @@ export default async function SchedulePage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Schedule</h1>
           <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
-            Set the hours you work each week. Clients can book a{" "}
-            {config.slotDurationMin}-minute appointment starting every{" "}
-            {config.slotIntervalMin} minutes within those hours.
+            Set the hours you work each week. Clients can start an appointment
+            every {config.slotIntervalMin} minutes within those hours — how long
+            it runs depends on the service they pick, set on the{" "}
+            <Link
+              href="/admin/services"
+              className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 font-medium"
+            >
+              Services
+            </Link>{" "}
+            page.
           </p>
         </div>
 
