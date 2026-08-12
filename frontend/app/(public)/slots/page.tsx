@@ -1,7 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { MonthCalendar } from "@/components/MonthCalendar";
+import { ServiceChip } from "@/components/ServiceChip";
 import { computeAvailability } from "@/lib/availability";
 import { loadAvailabilityInputs } from "@/lib/scheduleData";
+import { getBookableService } from "@/lib/serviceData";
+import { formatDuration } from "@/lib/service";
 import {
   addMonthsToMonthKey,
   formatMonthLabel,
@@ -40,12 +44,27 @@ function formatTime(date: Date) {
 export default async function SlotsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string; month?: string }>;
+  searchParams: Promise<{ service?: string; date?: string; month?: string }>;
 }) {
-  const { date: dateParam, month: monthParam } = await searchParams;
+  const {
+    service: serviceParam,
+    date: dateParam,
+    month: monthParam,
+  } = await searchParams;
+
+  // Which times exist depends entirely on how long the appointment is, so
+  // there's nothing honest to render without a service. A stale bookmark or a
+  // since-archived service lands back on the picker rather than on an error.
+  const service = await getBookableService(Number(serviceParam));
+  if (!service) redirect("/");
 
   const inputs = await loadAvailabilityInputs();
-  const days = computeAvailability(inputs);
+  const days = computeAvailability({
+    ...inputs,
+    durationMin: service.durationMinutes,
+  });
+
+  const withService = (query: string) => `/slots?service=${service.id}&${query}`;
 
   // `computeAvailability` only returns days that actually have an open time, so
   // membership in this map *is* the blue/gray split — no extra logic needed.
@@ -84,7 +103,7 @@ export default async function SlotsPage({
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-4">
         <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">
           Book an Appointment
         </h1>
@@ -93,11 +112,21 @@ export default async function SlotsPage({
         </p>
       </div>
 
+      <div className="mb-6">
+        <ServiceChip service={service} changeHref="/" />
+      </div>
+
       {availableDates.size === 0 ? (
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-12 text-center">
           <p className="text-gray-500 dark:text-slate-400">
-            No available times right now. Check back soon!
+            No {formatDuration(service.durationMinutes)} openings right now.
           </p>
+          <Link
+            href="/"
+            className="inline-block mt-4 text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 text-sm font-medium"
+          >
+            Try a shorter service →
+          </Link>
         </div>
       ) : (
         <div className="space-y-8">
@@ -110,11 +139,13 @@ export default async function SlotsPage({
               availableDates={availableDates}
               selectedDate={selectedDate}
               todayKey={todayKey}
-              hrefForDate={(dateKey) => `/slots?date=${dateKey}`}
+              hrefForDate={(dateKey) => withService(`date=${dateKey}`)}
               prevHref={
-                prevMonth < firstMonth ? null : `/slots?month=${prevMonth}`
+                prevMonth < firstMonth ? null : withService(`month=${prevMonth}`)
               }
-              nextHref={nextMonth > lastMonth ? null : `/slots?month=${nextMonth}`}
+              nextHref={
+                nextMonth > lastMonth ? null : withService(`month=${nextMonth}`)
+              }
               countForDate={(dateKey) => startsByDate.get(dateKey)?.length}
             />
           </div>
@@ -130,7 +161,7 @@ export default async function SlotsPage({
                   {selectedStarts.map((start) => (
                     <Link
                       key={start.getTime()}
-                      href={`/book/${start.getTime()}`}
+                      href={`/book/${start.getTime()}?service=${service.id}`}
                       className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-800 px-2 py-3 text-center text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-amber-400 dark:hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 hover:shadow-sm transition-all"
                     >
                       {formatTime(start)}

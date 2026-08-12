@@ -1,8 +1,12 @@
 # Availo — Slot Booking MVP
 
-A lightweight slot booking site for a single service provider. Admins create available
-time slots; clients browse and book one with just their name and email — no account
-required.
+A lightweight booking site for a single service provider. The admin publishes a recurring
+weekly schedule and a list of services, each with its own length and price; clients pick a
+service, then a time derived from that schedule, using just their name and email — no
+account required. Nothing about availability is stored: bookable times are computed per
+request from the schedule, the existing bookings, and the chosen service's length.
+
+See `PLAN.md` at the repo root for the full design.
 
 ## Stack
 

@@ -24,10 +24,6 @@ export async function PUT(req: NextRequest) {
   const body = await req.json();
   const current = await getOrCreateSettings();
 
-  const duration =
-    body.slotDurationMin === undefined
-      ? current.slotDurationMin
-      : Number(body.slotDurationMin);
   const interval =
     body.slotIntervalMin === undefined
       ? current.slotIntervalMin
@@ -43,13 +39,6 @@ export async function PUT(req: NextRequest) {
     body.address === undefined
       ? current.address
       : normalizeAddress(String(body.address));
-
-  if (!duration || duration < 5 || duration > 480) {
-    return Response.json(
-      { error: "Appointment length must be between 5 and 480 minutes" },
-      { status: 400 }
-    );
-  }
 
   if (!interval || interval < 5 || interval > 240) {
     return Response.json(
@@ -75,7 +64,6 @@ export async function PUT(req: NextRequest) {
   const settings = await db.settings.update({
     where: { id: 1 },
     data: {
-      slotDurationMin: duration,
       slotIntervalMin: interval,
       bookingHorizonDays: horizon,
       address,

@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { MAX_ADDRESS_LENGTH } from "@/lib/settings";
 
-const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120];
 const INTERVAL_OPTIONS = [10, 15, 20, 30, 60];
 const HORIZON_OPTIONS = [7, 14, 30, 60, 90];
 
 export type SettingsValues = {
-  slotDurationMin: number;
   slotIntervalMin: number;
   bookingHorizonDays: number;
   address: string;
@@ -65,7 +64,6 @@ export function SettingsForm({ current }: { current: SettingsValues }) {
   const [saved, setSaved] = useState(false);
 
   const isDirty =
-    values.slotDurationMin !== current.slotDurationMin ||
     values.slotIntervalMin !== current.slotIntervalMin ||
     values.bookingHorizonDays !== current.bookingHorizonDays ||
     values.address !== current.address;
@@ -102,15 +100,6 @@ export function SettingsForm({ current }: { current: SettingsValues }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <PillGroup
-        label="Appointment length"
-        hint="How long each booking takes. A booking blocks this much of your schedule."
-        options={DURATION_OPTIONS}
-        value={values.slotDurationMin}
-        format={(v) => `${v} min`}
-        onChange={(v) => set("slotDurationMin", v)}
-      />
-
-      <PillGroup
         label="Start times every"
         hint={`Clients see a start time this often within your hours — e.g. ${
           values.slotIntervalMin === 60 ? "4:00, 5:00" : "4:00, 4:15, 4:30"
@@ -120,6 +109,19 @@ export function SettingsForm({ current }: { current: SettingsValues }) {
         format={(v) => `${v} min`}
         onChange={(v) => set("slotIntervalMin", v)}
       />
+
+      {/* Appointment length used to live here. It's per-service now, because a
+          15-minute eyebrow trim and a 60-minute cut can't share one number. */}
+      <p className="text-xs text-gray-500 dark:text-slate-400">
+        How long each appointment takes is set per service on the{" "}
+        <Link
+          href="/admin/services"
+          className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 font-medium"
+        >
+          Services
+        </Link>{" "}
+        page.
+      </p>
 
       <PillGroup
         label="Book up to"

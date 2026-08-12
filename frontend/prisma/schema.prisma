@@ -20,20 +20,31 @@ model AdminUser {
 model Booking {
   id              Int      @id @default(autoincrement())
   startTime       DateTime @unique
+  /// Copied from the booked Service, so repricing or relengthening a service
+  /// later never resizes an appointment somebody already confirmed.
   durationMinutes Int
   clientName      String
   clientEmail     String
   cancelToken     String   @unique
   createdAt       DateTime @default(now())
 
+  /// Optional because bookings predating per-service durations have none, and
+  /// because the name/price snapshot below is what the client-facing pages
+  /// actually render. Restrict is the database-level backstop behind the
+  /// booking-count guard in DELETE /api/services/[id].
+  serviceId         Int?
+  service           Service? @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  serviceName       String   @default("")
+  servicePriceCents Int      @default(0)
+
   @@index([startTime])
+  @@index([serviceId])
 }
 
 model Settings {
   id                 Int @id @default(1)
-  /// How long an appointment lasts — a booking blocks this much time.
-  slotDurationMin    Int @default(30)
   /// Granularity of offered start times (e.g. 15 => 4:00, 4:15, 4:30 …).
+  /// How long an appointment lasts is NOT here — it belongs to each Service.
   slotIntervalMin    Int @default(15)
   /// How many days ahead clients may book.
   bookingHorizonDays Int @default(30)
@@ -77,10 +88,20 @@ model ScheduleOverrideWindow {
   @@index([overrideId])
 }
 
+/// Something a client can book. Carries the appointment length, so choosing a
+/// service is what determines which start times are even offered.
 model Service {
-  id         Int      @id @default(autoincrement())
-  name       String
-  emoji      String   @default("")
-  priceCents Int
-  createdAt  DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  name            String
+  emoji           String   @default("")
+  priceCents      Int
+  /// How long this service takes — a booking of it blocks this much time.
+  durationMinutes Int      @default(30)
+  /// Archived services disappear from the client flow but keep their row, so
+  /// bookings that reference them stay intact. Hard deletion is only allowed
+  /// while nothing references the service.
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  bookings Booking[]
 }

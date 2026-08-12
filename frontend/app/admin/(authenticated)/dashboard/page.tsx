@@ -3,6 +3,7 @@ import { AdminCancelBookingButton } from "@/components/AdminCancelBookingButton"
 import Link from "next/link";
 import { computeAvailability, windowsForDate, overridesByDate } from "@/lib/availability";
 import { loadAvailabilityInputs } from "@/lib/scheduleData";
+import { getBookableServices } from "@/lib/serviceData";
 import { formatWindow } from "@/lib/schedule";
 import {
   BUSINESS_TIMEZONE,
@@ -17,6 +18,7 @@ type Booking = {
   id: number;
   startTime: Date;
   durationMinutes: number;
+  serviceName: string;
   clientName: string;
   clientEmail: string;
 };
@@ -64,7 +66,12 @@ function DayBookings({ bookings, hours }: { bookings: Booking[]; hours: string }
                     · {booking.durationMinutes} min
                   </span>
                 </p>
+                {/* From the booking's own snapshot, so an archived or renamed
+                    service still shows what was actually booked. */}
                 <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 truncate">
+                  {booking.serviceName || "—"}
+                </p>
+                <p className="text-sm text-slate-600 dark:text-slate-300 truncate">
                   {booking.clientName}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-slate-400 truncate">
@@ -83,15 +90,33 @@ function DayBookings({ bookings, hours }: { bookings: Booking[]; hours: string }
 }
 
 export default async function DashboardPage() {
-  const inputs = await loadAvailabilityInputs();
+  const [inputs, services] = await Promise.all([
+    loadAvailabilityInputs(),
+    getBookableServices(),
+  ]);
 
   const bookings = await db.booking.findMany({
     where: { startTime: { gte: new Date() } },
     orderBy: { startTime: "asc" },
   });
 
-  const availability = computeAvailability(inputs);
-  const openCount = availability.reduce((total, day) => total + day.starts.length, 0);
+  // There's no single open-slot count any more: a 15-minute service fits into
+  // gaps an hour-long one can't. Counting with the shortest active service
+  // makes this an honest upper bound rather than an arbitrary pick — and the
+  // label says which service it's for.
+  const shortest = services.reduce<number | null>(
+    (min, service) =>
+      min === null ? service.durationMinutes : Math.min(min, service.durationMinutes),
+    null
+  );
+
+  const openCount =
+    shortest === null
+      ? null
+      : computeAvailability({ ...inputs, durationMin: shortest }).reduce(
+          (total, day) => total + day.starts.length,
+          0
+        );
 
   const todayKey = todayInTimezone();
   const tomorrowKey = addDaysToDateKey(todayKey, 1);
@@ -139,8 +164,23 @@ export default async function DashboardPage() {
             {bookings.length} upcoming booking{bookings.length === 1 ? "" : "s"}
           </p>
           <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-            {openCount} open time{openCount === 1 ? "" : "s"} over the next{" "}
-            {inputs.config.bookingHorizonDays} days
+            {openCount === null ? (
+              <>
+                No active services —{" "}
+                <Link
+                  href="/admin/services"
+                  className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 font-medium"
+                >
+                  add one
+                </Link>{" "}
+                before clients can book
+              </>
+            ) : (
+              <>
+                {openCount} open time{openCount === 1 ? "" : "s"} for a {shortest}{" "}
+                min service over the next {inputs.config.bookingHorizonDays} days
+              </>
+            )}
           </p>
         </div>
       </div>

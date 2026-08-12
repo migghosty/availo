@@ -3,21 +3,25 @@
  * endpoint so both enforce identical rules.
  *
  * Concurrency note: with start times offered every `slotIntervalMin` but
- * appointments lasting `slotDurationMin`, two clients can pick *different*
- * start times that still overlap (4:30 and 4:45 with 30-minute appointments).
- * A unique index on `startTime` alone wouldn't catch that, so the availability
- * re-check runs inside a Serializable transaction — Postgres then aborts one of
- * two conflicting writers rather than letting both through.
+ * appointments lasting as long as their service says, two clients can pick
+ * *different* start times that still overlap (4:30 and 4:45 with 30-minute
+ * appointments). Per-service durations widen that window rather than closing
+ * it — a 60-minute booking at 4:00 collides with a 15-minute one at 4:45. A
+ * unique index on `startTime` alone wouldn't catch any of it, so the
+ * availability re-check runs inside a Serializable transaction and Postgres
+ * aborts one of two conflicting writers rather than letting both through.
  */
 
 import { db } from "./db";
 import { isStartBookable } from "./availability";
 import { isSerializationFailure, isUniqueViolation } from "./dbErrors";
 import { loadAvailabilityInputs } from "./scheduleData";
+import { getBookableService } from "./serviceData";
 
 export type BookingFailure =
   | "INVALID_NAME"
   | "INVALID_EMAIL"
+  | "INVALID_SERVICE"
   | "UNAVAILABLE"
   | "ERROR";
 
@@ -56,10 +60,12 @@ function retryDelayMs(attempt: number): number {
 
 export async function createBooking({
   start,
+  serviceId,
   clientName,
   clientEmail,
 }: {
   start: Date;
+  serviceId: number;
   clientName: string;
   clientEmail: string;
 }): Promise<BookingResult> {
@@ -95,17 +101,33 @@ export async function createBooking({
       await db.$transaction(
         async (tx) => {
           // Read inside the transaction so these reads take part in Postgres'
-          // serializable conflict detection.
-          const inputs = await loadAvailabilityInputs(tx);
+          // serializable conflict detection. The service lookup belongs in here
+          // too: it decides how much time the booking blocks, and a service
+          // archived while the client sat on the form has to be caught now.
+          const [inputs, service] = await Promise.all([
+            loadAvailabilityInputs(tx),
+            getBookableService(serviceId, tx),
+          ]);
 
-          if (!isStartBookable({ start, ...inputs })) {
+          if (!service) {
+            throw new Error("INVALID_SERVICE");
+          }
+
+          if (
+            !isStartBookable({ start, ...inputs, durationMin: service.durationMinutes })
+          ) {
             throw new Error("UNAVAILABLE");
           }
 
           await tx.booking.create({
             data: {
               startTime: start,
-              durationMinutes: inputs.config.slotDurationMin,
+              // Snapshotted, not joined: renaming or repricing the service
+              // later must not rewrite an appointment already confirmed.
+              durationMinutes: service.durationMinutes,
+              serviceId: service.id,
+              serviceName: service.name,
+              servicePriceCents: service.priceCents,
               clientName: name,
               clientEmail: email,
               cancelToken,
@@ -117,6 +139,15 @@ export async function createBooking({
 
       return { ok: true, cancelToken };
     } catch (error) {
+      // The service is gone or archived — retrying can't change that.
+      if (error instanceof Error && error.message === "INVALID_SERVICE") {
+        return {
+          ok: false,
+          code: "INVALID_SERVICE",
+          message: "That service isn't available anymore. Please pick another.",
+        };
+      }
+
       // The availability re-check said no — a definite answer, never retried.
       if (error instanceof Error && error.message === "UNAVAILABLE") {
         return unavailable;

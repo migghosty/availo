@@ -91,6 +91,14 @@ export default async function MyBookingPage({
                         {formatDateTime(booking.startTime)}
                       </dd>
                     </div>
+                    {booking.serviceName && (
+                      <div className="flex justify-between">
+                        <dt className="text-gray-500 dark:text-slate-400">Service</dt>
+                        <dd className="font-medium text-slate-700 dark:text-slate-200">
+                          {booking.serviceName}
+                        </dd>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <dt className="text-gray-500 dark:text-slate-400">Duration</dt>
                       <dd className="font-medium text-slate-700 dark:text-slate-200">

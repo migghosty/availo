@@ -8,6 +8,12 @@
  *
  * That last part is what makes booking 4:30 also consume 4:45 — with a 30-minute
  * duration the 4:45 appointment would run into the 4:30–5:00 booking.
+ *
+ * `durationMin` is the length of the appointment being *considered*, which comes
+ * from the service the client picked, and is passed separately from `config`
+ * rather than living inside it. There is no global appointment length: the same
+ * schedule yields a different set of start times for a 15-minute service than
+ * for a 60-minute one, so every caller has to say which it means.
  */
 
 import {
@@ -36,8 +42,11 @@ export type BookingLike = {
   durationMinutes: number;
 };
 
+/**
+ * The schedule-wide knobs. Appointment length is deliberately absent — it
+ * belongs to a Service, and is threaded through as `durationMin`.
+ */
 export type AvailabilityConfig = {
-  slotDurationMin: number;
   slotIntervalMin: number;
   bookingHorizonDays: number;
 };
@@ -103,17 +112,21 @@ function overlapsBooking(
 
 /**
  * Candidate start times for a single date, before any past/booking filtering.
- * A candidate only counts if the whole appointment fits inside its window.
+ * A candidate only counts if the whole appointment fits inside its window —
+ * which is why a longer service loses the late starts a short one keeps.
  */
-function candidateMinutes(windows: TimeWindow[], config: AvailabilityConfig): number[] {
-  const { slotDurationMin, slotIntervalMin } = config;
-  const interval = Math.max(1, slotIntervalMin);
+function candidateMinutes(
+  windows: TimeWindow[],
+  config: AvailabilityConfig,
+  durationMin: number
+): number[] {
+  const interval = Math.max(1, config.slotIntervalMin);
   const minutes = new Set<number>();
 
   for (const window of windows) {
     for (
       let minute = window.startMinute;
-      minute + slotDurationMin <= window.endMinute;
+      minute + durationMin <= window.endMinute;
       minute += interval
     ) {
       minutes.add(minute);
@@ -130,6 +143,7 @@ export function availabilityForDate(
   overrideMap: Map<string, ScheduleOverrideLike>,
   bookings: BookingLike[],
   config: AvailabilityConfig,
+  durationMin: number,
   now: Date = new Date()
 ): Date[] {
   const windows = windowsForDate(dateKey, rules, overrideMap);
@@ -137,27 +151,29 @@ export function availabilityForDate(
 
   const nowMs = now.getTime();
 
-  return candidateMinutes(windows, config)
+  return candidateMinutes(windows, config, durationMin)
     .map((minute) => instantForDateMinute(dateKey, minute))
     .filter((start) => start.getTime() > nowMs)
-    .filter((start) => !overlapsBooking(start.getTime(), config.slotDurationMin, bookings));
+    .filter((start) => !overlapsBooking(start.getTime(), durationMin, bookings));
 }
 
 /**
- * Bookable start times per day from today through the booking horizon.
- * Days with nothing available are omitted.
+ * Bookable start times per day from today through the booking horizon, for an
+ * appointment of `durationMin`. Days with nothing available are omitted.
  */
 export function computeAvailability({
   rules,
   overrides,
   bookings,
   config,
+  durationMin,
   now = new Date(),
 }: {
   rules: ScheduleRuleLike[];
   overrides: ScheduleOverrideLike[];
   bookings: BookingLike[];
   config: AvailabilityConfig;
+  durationMin: number;
   now?: Date;
 }): DayAvailability[] {
   const overrideMap = overridesByDate(overrides);
@@ -166,7 +182,15 @@ export function computeAvailability({
 
   for (let offset = 0; offset <= config.bookingHorizonDays; offset++) {
     const dateKey = addDaysToDateKey(startDateKey, offset);
-    const starts = availabilityForDate(dateKey, rules, overrideMap, bookings, config, now);
+    const starts = availabilityForDate(
+      dateKey,
+      rules,
+      overrideMap,
+      bookings,
+      config,
+      durationMin,
+      now
+    );
     if (starts.length > 0) days.push({ dateKey, starts });
   }
 
@@ -174,11 +198,13 @@ export function computeAvailability({
 }
 
 /**
- * Whether a specific instant is a legitimate, still-open start time.
+ * Whether a specific instant is a legitimate, still-open start time for an
+ * appointment of `durationMin`.
  *
  * Deliberately re-derives the day's availability rather than trusting the
  * caller, so the booking endpoint and the times shown to clients can never
- * disagree about what's bookable.
+ * disagree about what's bookable. Note the answer depends on the service: 4:15
+ * may be open for a 15-minute appointment and closed for a 30-minute one.
  */
 export function isStartBookable({
   start,
@@ -186,6 +212,7 @@ export function isStartBookable({
   overrides,
   bookings,
   config,
+  durationMin,
   now = new Date(),
 }: {
   start: Date;
@@ -193,6 +220,7 @@ export function isStartBookable({
   overrides: ScheduleOverrideLike[];
   bookings: BookingLike[];
   config: AvailabilityConfig;
+  durationMin: number;
   now?: Date;
 }): boolean {
   if (Number.isNaN(start.getTime())) return false;
@@ -210,6 +238,7 @@ export function isStartBookable({
     overridesByDate(overrides),
     bookings,
     config,
+    durationMin,
     now
   );
 

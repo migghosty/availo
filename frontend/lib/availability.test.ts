@@ -35,10 +35,16 @@ const rules: ScheduleRuleLike[] = [
 ];
 
 const config: AvailabilityConfig = {
-  slotDurationMin: 30,
   slotIntervalMin: 15,
   bookingHorizonDays: 30,
 };
+
+/**
+ * The length of the service being booked. Not part of `config` — it comes from
+ * whichever Service the client picked, so most cases here fix it at 30 minutes
+ * and the ones that care vary it explicitly.
+ */
+const DURATION = 30;
 
 const MONDAY = "2026-08-10";
 const TUESDAY = "2026-08-11";
@@ -62,11 +68,11 @@ function at(date: Date): string {
 
 /** Bookable times on a date, as wall-clock strings. */
 const timesOn = (dateKey: string, bookings: BookingLike[] = noBookings) =>
-  availabilityForDate(dateKey, rules, noOverrides, bookings, config, now).map(at);
+  availabilityForDate(dateKey, rules, noOverrides, bookings, config, DURATION, now).map(at);
 
 describe("window expansion", () => {
   it("offers a start every slotIntervalMin across the day's window", () => {
-    const starts = availabilityForDate(MONDAY, rules, noOverrides, noBookings, config, now);
+    const starts = availabilityForDate(MONDAY, rules, noOverrides, noBookings, config, DURATION, now);
 
     // 4:00 PM through 9:30 PM every 15 minutes.
     expect(starts).toHaveLength(23);
@@ -83,7 +89,7 @@ describe("window expansion", () => {
   });
 
   it("uses each weekday's own hours", () => {
-    const starts = availabilityForDate(TUESDAY, rules, noOverrides, noBookings, config, now);
+    const starts = availabilityForDate(TUESDAY, rules, noOverrides, noBookings, config, DURATION, now);
 
     // Tuesday is the shorter 7–10 PM window.
     expect(starts).toHaveLength(11);
@@ -93,7 +99,7 @@ describe("window expansion", () => {
 
   it("returns nothing for a weekday with no rule", () => {
     // Sunday — the seeded schedule has no rule for it.
-    expect(availabilityForDate("2026-08-16", rules, noOverrides, noBookings, config, now)).toEqual([]);
+    expect(availabilityForDate("2026-08-16", rules, noOverrides, noBookings, config, DURATION, now)).toEqual([]);
   });
 });
 
@@ -105,7 +111,7 @@ describe("the overlap rule", () => {
   ];
 
   const remaining = () =>
-    availabilityForDate(MONDAY, rules, noOverrides, booked430, config, now).map(at);
+    availabilityForDate(MONDAY, rules, noOverrides, booked430, config, DURATION, now).map(at);
 
   it("consumes the booked start itself", () => {
     expect(remaining()).not.toContain("4:30 PM");
@@ -131,19 +137,50 @@ describe("the overlap rule", () => {
   });
 
   it("removes exactly three candidates for a 30-minute booking", () => {
-    const before = availabilityForDate(MONDAY, rules, noOverrides, noBookings, config, now);
-    const after = availabilityForDate(MONDAY, rules, noOverrides, booked430, config, now);
+    const before = availabilityForDate(MONDAY, rules, noOverrides, noBookings, config, DURATION, now);
+    const after = availabilityForDate(MONDAY, rules, noOverrides, booked430, config, DURATION, now);
 
     expect(before.length - after.length).toBe(3);
   });
 
   it("removes proportionally more when appointments are longer", () => {
     // 60-minute appointments: 4:00, 4:15, 4:30 and 4:45 all collide.
-    const longConfig = { ...config, slotDurationMin: 60 };
-    const before = availabilityForDate(MONDAY, rules, noOverrides, noBookings, longConfig, now);
-    const after = availabilityForDate(MONDAY, rules, noOverrides, booked430, longConfig, now);
+    const before = availabilityForDate(MONDAY, rules, noOverrides, noBookings, config, 60, now);
+    const after = availabilityForDate(MONDAY, rules, noOverrides, booked430, config, 60, now);
 
     expect(before.length - after.length).toBe(4);
+  });
+
+  it("blocks fewer starts for a shorter service against the same booking", () => {
+    // The whole point of per-service durations. Against one 4:30–5:00 booking a
+    // 30-minute service loses 4:15 (it would run to 4:45, into the booking),
+    // while a 15-minute service keeps it — 4:15–4:30 merely touches.
+    const forThirty = availabilityForDate(
+      MONDAY, rules, noOverrides, booked430, config, 30, now
+    ).map(at);
+    const forFifteen = availabilityForDate(
+      MONDAY, rules, noOverrides, booked430, config, 15, now
+    ).map(at);
+
+    expect(forThirty).not.toContain("4:15 PM");
+    expect(forFifteen).toContain("4:15 PM");
+
+    // Both still lose the booking itself and the start inside it.
+    for (const times of [forThirty, forFifteen]) {
+      expect(times).not.toContain("4:30 PM");
+      expect(times).not.toContain("4:45 PM");
+    }
+  });
+
+  it("lets a short service use a late start a long one cannot fit", () => {
+    // Closing is 10:00 PM. A 15-minute appointment fits at 9:45; neither a
+    // 30- nor a 60-minute one does.
+    const short = availabilityForDate(MONDAY, rules, noOverrides, noBookings, config, 15, now).map(at);
+    const long = availabilityForDate(MONDAY, rules, noOverrides, noBookings, config, 60, now).map(at);
+
+    expect(short).toContain("9:45 PM");
+    expect(long).not.toContain("9:45 PM");
+    expect(long[long.length - 1]).toBe("9:00 PM");
   });
 });
 
@@ -151,14 +188,14 @@ describe("overrides", () => {
   it("yields nothing when the day is marked closed", () => {
     const closed = overridesByDate([{ date: MONDAY, isClosed: true, windows: [] }]);
 
-    expect(availabilityForDate(MONDAY, rules, closed, noBookings, config, now)).toEqual([]);
+    expect(availabilityForDate(MONDAY, rules, closed, noBookings, config, DURATION, now)).toEqual([]);
   });
 
   it("replaces the weekday's rules rather than merging with them", () => {
     const overrides = overridesByDate([
       { date: MONDAY, isClosed: false, windows: [{ startMinute: 9 * HOUR, endMinute: 11 * HOUR }] },
     ]);
-    const starts = availabilityForDate(MONDAY, rules, overrides, noBookings, config, now).map(at);
+    const starts = availabilityForDate(MONDAY, rules, overrides, noBookings, config, DURATION, now).map(at);
 
     expect(starts[0]).toBe("9:00 AM");
     expect(starts[starts.length - 1]).toBe("10:30 AM");
@@ -172,7 +209,7 @@ describe("overrides", () => {
     ]);
 
     expect(
-      availabilityForDate(NEXT_MONDAY, rules, overrides, noBookings, config, now)
+      availabilityForDate(NEXT_MONDAY, rules, overrides, noBookings, config, DURATION, now)
     ).toHaveLength(23);
   });
 
@@ -202,7 +239,7 @@ describe("split shifts", () => {
   ];
 
   it("offers starts in both windows and none in the gap", () => {
-    const starts = availabilityForDate(MONDAY, split, noOverrides, noBookings, config, now).map(at);
+    const starts = availabilityForDate(MONDAY, split, noOverrides, noBookings, config, DURATION, now).map(at);
 
     expect(starts).toHaveLength(14);
     expect(starts[0]).toBe("9:00 AM");
@@ -216,7 +253,7 @@ describe("split shifts", () => {
       { dayOfWeek: 1, startMinute: 9 * HOUR, endMinute: 11 * HOUR },
       { dayOfWeek: 1, startMinute: 9 * HOUR, endMinute: 10 * HOUR },
     ];
-    const starts = availabilityForDate(MONDAY, overlapping, noOverrides, noBookings, config, now);
+    const starts = availabilityForDate(MONDAY, overlapping, noOverrides, noBookings, config, DURATION, now);
 
     expect(new Set(starts.map((s) => s.getTime())).size).toBe(starts.length);
   });
@@ -225,7 +262,7 @@ describe("split shifts", () => {
 describe("past times", () => {
   it("drops starts at or before now", () => {
     const sixPM = instantForDateMinute(MONDAY, 18 * HOUR);
-    const starts = availabilityForDate(MONDAY, rules, noOverrides, noBookings, config, sixPM);
+    const starts = availabilityForDate(MONDAY, rules, noOverrides, noBookings, config, DURATION, sixPM);
 
     expect(starts.every((start) => start > sixPM)).toBe(true);
     // 6:00 PM itself is gone — the filter is strictly greater-than.
@@ -245,8 +282,11 @@ describe("isStartBookable", () => {
     vi.useRealTimers();
   });
 
-  const check = (start: Date, bookings: BookingLike[] = []) =>
-    isStartBookable({ start, rules, overrides: [], bookings, config });
+  const check = (
+    start: Date,
+    bookings: BookingLike[] = [],
+    durationMin: number = DURATION
+  ) => isStartBookable({ start, rules, overrides: [], bookings, config, durationMin });
 
   it("accepts a start the schedule actually offers", () => {
     expect(check(instantForDateMinute(MONDAY, 16 * HOUR + 30))).toBe(true);
@@ -271,6 +311,18 @@ describe("isStartBookable", () => {
     ];
 
     expect(check(instantForDateMinute(MONDAY, 16 * HOUR + 15), bookings)).toBe(false);
+  });
+
+  it("gives a different answer for the same instant depending on the service", () => {
+    // Not a quirk — this is why the booking endpoint has to know the service
+    // before it can decide, and why the client can't be trusted for either.
+    const bookings: BookingLike[] = [
+      { startTime: instantForDateMinute(MONDAY, 16 * HOUR + 30), durationMinutes: 30 },
+    ];
+    const fourFifteen = instantForDateMinute(MONDAY, 16 * HOUR + 15);
+
+    expect(check(fourFifteen, bookings, 30)).toBe(false);
+    expect(check(fourFifteen, bookings, 15)).toBe(true);
   });
 
   it("rejects an invalid date", () => {
@@ -300,7 +352,7 @@ describe("computeAvailability", () => {
   });
 
   it("omits days with nothing available", () => {
-    const days = computeAvailability({ rules, overrides: [], bookings: [], config });
+    const days = computeAvailability({ rules, overrides: [], bookings: [], config, durationMin: DURATION });
     const dateKeys = days.map((day) => day.dateKey);
 
     // Sunday 2026-08-09 (today) and 2026-08-16 have no rules.
@@ -310,13 +362,13 @@ describe("computeAvailability", () => {
   });
 
   it("returns days in chronological order", () => {
-    const days = computeAvailability({ rules, overrides: [], bookings: [], config });
+    const days = computeAvailability({ rules, overrides: [], bookings: [], config, durationMin: DURATION });
 
     expect([...days].map((d) => d.dateKey).sort()).toEqual(days.map((d) => d.dateKey));
   });
 
   it("spans today through the horizon inclusive", () => {
-    const days = computeAvailability({ rules, overrides: [], bookings: [], config });
+    const days = computeAvailability({ rules, overrides: [], bookings: [], config, durationMin: DURATION });
 
     expect(days[days.length - 1].dateKey <= "2026-09-08").toBe(true);
   });
@@ -349,8 +401,8 @@ describe("daylight saving time", () => {
   it("keeps a 4-10 PM window six hours long across a DST boundary", () => {
     // The count must not change just because the clocks moved: these are wall
     // clock hours, not a fixed span of elapsed time.
-    const springForward = availabilityForDate("2026-03-09", rules, noOverrides, noBookings, config, now);
-    const ordinary = availabilityForDate(MONDAY, rules, noOverrides, noBookings, config, now);
+    const springForward = availabilityForDate("2026-03-09", rules, noOverrides, noBookings, config, DURATION, now);
+    const ordinary = availabilityForDate(MONDAY, rules, noOverrides, noBookings, config, DURATION, now);
 
     expect(springForward).toHaveLength(ordinary.length);
   });

@@ -1,15 +1,17 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
+import { getBookableServices } from "@/lib/serviceData";
+import { formatDuration, formatPrice } from "@/lib/service";
 
 export const dynamic = "force-dynamic";
 
-function formatPrice(priceCents: number) {
-  const dollars = priceCents / 100;
-  return `$${dollars % 1 === 0 ? dollars.toFixed(0) : dollars.toFixed(2)}`;
-}
-
+/**
+ * The landing page is the service picker. There's no generic "Book Now"
+ * anywhere: the service determines the appointment length, and the length
+ * determines which start times exist at all, so `/slots` has nothing to show
+ * until a service is chosen.
+ */
 export default async function LandingPage() {
-  const services = await db.service.findMany({ orderBy: { id: "asc" } });
+  const services = await getBookableServices();
 
   return (
     <div>
@@ -19,49 +21,63 @@ export default async function LandingPage() {
           Fresh cuts. Clean edges.
         </h1>
         <p className="text-gray-500 dark:text-slate-400 mt-3 text-base sm:text-lg px-2">
-          Book your next appointment in seconds — no account needed.
+          Pick a service to book your next appointment — no account needed.
         </p>
-        <Link
-          href="/slots"
-          className="inline-block mt-7 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold px-8 py-3 rounded-xl text-sm transition-colors shadow-sm"
-        >
-          Book Now
-        </Link>
+        {services.length > 0 && (
+          <a
+            href="#services"
+            className="inline-block mt-7 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold px-8 py-3 rounded-xl text-sm transition-colors shadow-sm"
+          >
+            Choose a service
+          </a>
+        )}
       </div>
 
-      {/* Services */}
-      {services.length > 0 && (
-        <div className="mt-2">
-          <h2 className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-4">
-            Services
-          </h2>
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800">
+      {/* Services — each row is the whole tap target, not a small inline link */}
+      <div className="mt-2" id="services">
+        <h2 className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-4">
+          Services
+        </h2>
+
+        {services.length === 0 ? (
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-12 text-center">
+            <p className="text-gray-500 dark:text-slate-400">
+              No services available right now. Check back soon!
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800 overflow-hidden">
             {services.map((service) => (
-              <div
+              <Link
                 key={service.id}
-                className="flex items-center justify-between px-5 py-4 sm:px-6"
+                href={`/slots?service=${service.id}`}
+                className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6 hover:bg-amber-50/60 dark:hover:bg-amber-500/10 active:bg-amber-100/60 dark:active:bg-amber-500/15 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl" aria-hidden>{service.emoji}</span>
-                  <span className="font-medium text-slate-700 dark:text-slate-200">{service.name}</span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-2xl flex-none" aria-hidden>
+                    {service.emoji}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-700 dark:text-slate-200 truncate">
+                      {service.name}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">
+                      {formatDuration(service.durationMinutes)}
+                    </p>
+                  </div>
                 </div>
-                <span className="text-amber-600 dark:text-amber-400 font-semibold">
-                  {formatPrice(service.priceCents)}
-                </span>
-              </div>
+                <div className="flex items-center gap-2 flex-none">
+                  <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                    {formatPrice(service.priceCents)}
+                  </span>
+                  <span className="text-gray-300 dark:text-slate-600" aria-hidden>
+                    →
+                  </span>
+                </div>
+              </Link>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* CTA footer */}
-      <div className="mt-10 text-center">
-        <Link
-          href="/slots"
-          className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 font-medium transition-colors"
-        >
-          View available times →
-        </Link>
+        )}
       </div>
     </div>
   );

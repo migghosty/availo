@@ -13,7 +13,17 @@ import { BUSINESS_TIMEZONE } from "./timezone";
  * knobs — so this matches the brand in `app/(public)/layout.tsx`. One constant
  * to change if a name ever lands in the database.
  */
-export const EVENT_TITLE = "Appointment at Availo";
+export const BUSINESS_LABEL = "Availo";
+
+/**
+ * "Haircut at Availo" beats "Appointment at Availo" in a crowded calendar.
+ * Falls back to the generic title for bookings made before a service was
+ * required, whose snapshot is empty.
+ */
+export function eventTitle(serviceName: string): string {
+  const service = serviceName.trim();
+  return `${service || "Appointment"} at ${BUSINESS_LABEL}`;
+}
 
 /** Long enough to leave for a local appointment, short enough not to be noise. */
 const REMINDER_MINUTES_BEFORE = 60;
@@ -22,6 +32,7 @@ const REMINDER_MINUTES_BEFORE = 60;
 export type BookableEvent = {
   startTime: Date;
   durationMinutes: number;
+  serviceName: string;
   clientName: string;
   cancelToken: string;
   createdAt: Date;
@@ -62,7 +73,7 @@ export function toCalendarEvent(
     // Fixed to the booking, not the moment of download, so the file is
     // byte-identical every time it's fetched.
     stamp: booking.createdAt,
-    title: EVENT_TITLE,
+    title: eventTitle(booking.serviceName),
     description,
     // The admin may not have set one; `buildIcs` then omits LOCATION entirely.
     location: address || undefined,
