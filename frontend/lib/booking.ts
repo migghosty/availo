@@ -18,10 +18,12 @@ import { isSerializationFailure, isUniqueViolation } from "./dbErrors";
 import { loadAvailabilityInputs } from "./scheduleData";
 import { getBookableService } from "./serviceData";
 import { normalizePhone } from "./phone";
+import { notifyBookingCreated } from "./notifications";
 
 export type BookingFailure =
   | "INVALID_NAME"
   | "INVALID_PHONE"
+  | "CONSENT_REQUIRED"
   | "INVALID_SERVICE"
   | "UNAVAILABLE"
   | "ERROR";
@@ -62,11 +64,26 @@ export async function createBooking({
   serviceId,
   clientName,
   clientPhone,
+  smsConsent,
+  origin,
 }: {
   start: Date;
   serviceId: number;
   clientName: string;
   clientPhone: string;
+  /**
+   * Whether the client ticked the box agreeing to be texted. Required: the
+   * booking's only purpose is to produce a text, and carrier rules make
+   * unrecorded consent a liability rather than a convenience.
+   */
+  smsConsent: boolean;
+  /**
+   * Where the confirmation text should point its cancel link. Passed in rather
+   * than derived, since `getOrigin()` reads request headers and this function
+   * also runs from the integration tests with no request. Omitted means the
+   * text simply carries no link.
+   */
+  origin?: string;
 }): Promise<BookingResult> {
   const name = clientName.trim();
 
@@ -92,6 +109,17 @@ export async function createBooking({
     };
   }
 
+  // Re-checked server-side for the same reason the start time is: a checkbox
+  // is trivially removed from the DOM, and this is the record that has to hold
+  // up if a carrier or a complaint ever asks.
+  if (!smsConsent) {
+    return {
+      ok: false,
+      code: "CONSENT_REQUIRED",
+      message: "Please agree to receive text messages about your appointment.",
+    };
+  }
+
   const cancelToken = crypto.randomUUID();
 
   const unavailable: BookingResult = {
@@ -102,7 +130,10 @@ export async function createBooking({
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      await db.$transaction(
+      // The transaction hands back what the notification needs: it's the only
+      // scope where the service is in hand, and the send has to happen after
+      // the commit rather than inside it.
+      const booked = await db.$transaction(
         async (tx) => {
           // Read inside the transaction so these reads take part in Postgres'
           // serializable conflict detection. The service lookup belongs in here
@@ -135,10 +166,28 @@ export async function createBooking({
               clientName: name,
               clientPhone: phone,
               cancelToken,
+              smsConsentAt: new Date(),
             },
           });
+
+          return { serviceName: service.name };
         },
         { isolationLevel: "Serializable" }
+      );
+
+      // Only reached once per committed booking. Deliberately NOT inside the
+      // transaction callback above: that body re-runs up to MAX_ATTEMPTS times,
+      // and Serializable aborts even genuinely non-overlapping bookings, so a
+      // send in there would fire on attempts that never committed.
+      await notifyBookingCreated(
+        {
+          startTime: start,
+          serviceName: booked.serviceName,
+          clientName: name,
+          clientPhone: phone,
+          cancelToken,
+        },
+        { origin }
       );
 
       return { ok: true, cancelToken };

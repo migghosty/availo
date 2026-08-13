@@ -9,20 +9,16 @@ import type { CalendarEvent } from "./calendar";
 import { BUSINESS_TIMEZONE } from "./timezone";
 
 /**
- * No business name is stored anywhere yet — `Settings` holds only scheduling
- * knobs — so this matches the brand in `app/(public)/layout.tsx`. One constant
- * to change if a name ever lands in the database.
- */
-export const BUSINESS_LABEL = "Availo";
-
-/**
- * "Haircut at Availo" beats "Appointment at Availo" in a crowded calendar.
- * Falls back to the generic title for bookings made before a service was
+ * "Haircut at Ada's Barbershop" beats "Appointment at …" in a crowded calendar.
+ * Falls back to the generic word for bookings made before a service was
  * required, whose snapshot is empty.
+ *
+ * `businessName` is injected rather than a constant here: it lives in
+ * `Settings` now, and this module is pure.
  */
-export function eventTitle(serviceName: string): string {
+export function eventTitle(serviceName: string, businessName: string): string {
   const service = serviceName.trim();
-  return `${service || "Appointment"} at ${BUSINESS_LABEL}`;
+  return `${service || "Appointment"} at ${businessName}`;
 }
 
 /** Long enough to leave for a local appointment, short enough not to be noise. */
@@ -53,7 +49,11 @@ function formatBusinessTime(date: Date): string {
 
 export function toCalendarEvent(
   booking: BookableEvent,
-  { origin, address = "" }: { origin: string; address?: string }
+  {
+    origin,
+    address = "",
+    businessName,
+  }: { origin: string; address?: string; businessName: string }
 ): CalendarEvent {
   // The business time is spelled out even though the calendar already shows a
   // time: a client whose phone is in another timezone sees the converted hour on
@@ -73,7 +73,7 @@ export function toCalendarEvent(
     // Fixed to the booking, not the moment of download, so the file is
     // byte-identical every time it's fetched.
     stamp: booking.createdAt,
-    title: eventTitle(booking.serviceName),
+    title: eventTitle(booking.serviceName, businessName),
     description,
     // The admin may not have set one; `buildIcs` then omits LOCATION entirely.
     location: address || undefined,

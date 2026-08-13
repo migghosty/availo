@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { DEFAULT_CONFIG } from "@/lib/scheduleData";
 import { MAX_ADDRESS_LENGTH, normalizeAddress } from "@/lib/settings";
+import { normalizePhone } from "@/lib/phone";
 import { NextRequest } from "next/server";
 
 async function getOrCreateSettings() {
@@ -61,12 +62,42 @@ export async function PUT(req: NextRequest) {
     );
   }
 
+  // Stored in the same canonical E.164 as a client's number, via the same
+  // normalizer. Empty stays legal and means "don't text me" — so it's checked
+  // before normalizePhone, which rejects an empty string.
+  let adminPhone = current.adminPhone;
+  if (body.adminPhone !== undefined) {
+    const raw = String(body.adminPhone).trim();
+
+    if (raw === "") {
+      adminPhone = "";
+    } else {
+      const normalized = normalizePhone(raw);
+      if (!normalized) {
+        return Response.json(
+          { error: "Enter a US or Canada phone number, e.g. (619) 123-4567." },
+          { status: 400 }
+        );
+      }
+      adminPhone = normalized;
+    }
+  }
+
+  // Never blank: this labels every text and the site header, so an empty value
+  // falls back rather than producing ": You're booked".
+  const businessName =
+    body.businessName === undefined
+      ? current.businessName
+      : String(body.businessName).trim().slice(0, 60) || current.businessName;
+
   const settings = await db.settings.update({
     where: { id: 1 },
     data: {
       slotIntervalMin: interval,
       bookingHorizonDays: horizon,
       address,
+      adminPhone,
+      businessName,
     },
   });
 

@@ -1,4 +1,5 @@
-import { db } from "@/lib/db";
+import { cancelBooking } from "@/lib/cancellation";
+import { getOrigin } from "@/lib/siteUrl";
 
 export async function DELETE(
   _req: Request,
@@ -6,12 +7,15 @@ export async function DELETE(
 ) {
   const { token } = await params;
 
-  const booking = await db.booking.findUnique({ where: { cancelToken: token } });
-  if (!booking) return Response.json({ error: "Booking not found" }, { status: 404 });
+  // Origin is resolved here and passed down: getOrigin() reads request headers,
+  // so it can only be called at the edge of a request.
+  const result = await cancelBooking({ cancelToken: token }, "client", {
+    origin: await getOrigin(),
+  });
 
-  // Deleting is all that's needed — the time becomes available again on its own,
-  // since availability is computed from the schedule minus existing bookings.
-  await db.booking.delete({ where: { cancelToken: token } });
+  if (!result.ok) {
+    return Response.json({ error: "Booking not found" }, { status: 404 });
+  }
 
   return Response.json({ success: true });
 }

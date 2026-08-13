@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { cancelBooking } from "@/lib/cancellation";
+import { getOrigin } from "@/lib/siteUrl";
 
 export async function DELETE(
   _req: Request,
@@ -15,10 +16,15 @@ export async function DELETE(
     return Response.json({ error: "Invalid booking ID" }, { status: 400 });
   }
 
-  const booking = await db.booking.findUnique({ where: { id: bookingId } });
-  if (!booking) return Response.json({ error: "Booking not found" }, { status: 404 });
+  // "admin" here is what makes the client get told, rather than the admin
+  // texting themselves about their own action.
+  const result = await cancelBooking({ id: bookingId }, "admin", {
+    origin: await getOrigin(),
+  });
 
-  await db.booking.delete({ where: { id: bookingId } });
+  if (!result.ok) {
+    return Response.json({ error: "Booking not found" }, { status: 404 });
+  }
 
   return Response.json({ success: true });
 }
