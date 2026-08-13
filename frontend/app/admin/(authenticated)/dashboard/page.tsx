@@ -43,7 +43,16 @@ function formatDayHeading(dateKey: string) {
   }).format(new Date(Date.UTC(year, month - 1, day, 12)));
 }
 
-function DayBookings({ bookings, hours }: { bookings: Booking[]; hours: string }) {
+function DayBookings({
+  bookings,
+  hours,
+  optedOut,
+}: {
+  bookings: Booking[];
+  hours: string;
+  /** Numbers that have texted STOP, so a silent client reads as a choice. */
+  optedOut: Set<string>;
+}) {
   return (
     <>
       <p className="text-xs text-gray-400 dark:text-slate-500 mb-2">{hours}</p>
@@ -85,6 +94,11 @@ function DayBookings({ bookings, hours }: { bookings: Booking[]; hours: string }
                 >
                   {formatPhone(booking.clientPhone)}
                 </a>
+                {optedOut.has(booking.clientPhone) && (
+                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1.5">
+                    Opted out of texts — call instead
+                  </p>
+                )}
               </div>
               <div className="flex-none">
                 <AdminCancelBookingButton bookingId={booking.id} />
@@ -107,6 +121,14 @@ export default async function DashboardPage() {
     where: { startTime: { gte: new Date() } },
     orderBy: { startTime: "asc" },
   });
+
+  // Only the numbers already on screen, so this stays one small query however
+  // long the opt-out list grows.
+  const optedOutRows = await db.smsOptOut.findMany({
+    where: { phone: { in: bookings.map((booking) => booking.clientPhone) } },
+    select: { phone: true },
+  });
+  const optedOut = new Set(optedOutRows.map((row) => row.phone));
 
   // There's no single open-slot count any more: a 15-minute service fits into
   // gaps an hour-long one can't. Counting with the shortest active service
@@ -202,6 +224,7 @@ export default async function DashboardPage() {
             <DayBookings
               bookings={byDate.get(section.key) ?? []}
               hours={hoursFor(section.key)}
+              optedOut={optedOut}
             />
           </section>
         ))}

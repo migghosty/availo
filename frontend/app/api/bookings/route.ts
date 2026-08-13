@@ -1,9 +1,11 @@
 import { db } from "@/lib/db";
 import { createBooking } from "@/lib/booking";
+import { getOrigin } from "@/lib/siteUrl";
 import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const { startTime, serviceId, clientName, clientPhone } = await req.json();
+  const { startTime, serviceId, clientName, clientPhone, smsConsent } =
+    await req.json();
 
   if (!startTime || !clientName?.trim() || !clientPhone?.trim()) {
     return Response.json(
@@ -29,6 +31,8 @@ export async function POST(req: NextRequest) {
     serviceId: service,
     clientName,
     clientPhone,
+    smsConsent: smsConsent === true,
+    origin: await getOrigin(),
   });
 
   if (!result.ok) {

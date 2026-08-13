@@ -40,6 +40,12 @@ model Booking {
   serviceName       String   @default("")
   servicePriceCents Int      @default(0)
 
+  /// When this client ticked the box agreeing to be texted. Null on bookings
+  /// made before consent was collected. This is the evidence a carrier or a
+  /// complaint would ask for, so it is recorded per booking rather than once
+  /// per number — a per-appointment timestamp beats one stale agreement.
+  smsConsentAt DateTime?
+
   @@index([startTime])
   @@index([serviceId])
   @@index([clientPhone])
@@ -56,6 +62,26 @@ model Settings {
   /// write it the way clients would search for it. Empty means "not set", in
   /// which case calendar events simply carry no location.
   address            String @default("")
+  /// Where booking notifications are texted. E.164, normalized by lib/phone.ts.
+  /// Empty means "not set" and admin texts are skipped entirely — same
+  /// convention as `address` above.
+  adminPhone         String @default("")
+  /// The trading name clients see: in every text, in calendar event titles, on
+  /// the policy pages and in the public header. Must match the brand registered
+  /// with the carriers for A2P 10DLC, or the sample messages submitted there
+  /// won't match what actually gets sent — a common rejection reason.
+  businessName       String @default("Availo")
+}
+
+/// One row per number that has texted STOP.
+///
+/// Twilio blocks these at its end regardless, so this is not what enforces the
+/// opt-out. It exists so the app can say *why* someone stopped hearing from us
+/// instead of appearing broken, and so we don't spend an API call being told no.
+model SmsOptOut {
+  /// E.164, the same canonical form as Booking.clientPhone.
+  phone      String   @id
+  optedOutAt DateTime @default(now())
 }
 
 /// Recurring weekly availability. One row per open window per weekday, so a day

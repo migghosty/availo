@@ -1,6 +1,6 @@
 import { toCalendarEvent, type BookableEvent } from "@/lib/bookingEvent";
 import { googleCalendarUrl } from "@/lib/calendar";
-import { getBusinessAddress } from "@/lib/settingsData";
+import { getBusinessAddress, getBusinessName } from "@/lib/settingsData";
 import { getOrigin } from "@/lib/siteUrl";
 
 /**
@@ -18,8 +18,12 @@ import { getOrigin } from "@/lib/siteUrl";
  *   open a new tab, because it genuinely leaves the site.
  */
 export async function AddToCalendar({ booking }: { booking: BookableEvent }) {
-  const [origin, address] = await Promise.all([getOrigin(), getBusinessAddress()]);
-  const event = toCalendarEvent(booking, { origin, address });
+  const [origin, address, businessName] = await Promise.all([
+    getOrigin(),
+    getBusinessAddress(),
+    getBusinessName(),
+  ]);
+  const event = toCalendarEvent(booking, { origin, address, businessName });
 
   return (
     <div>

@@ -1,12 +1,17 @@
 import { SettingsForm } from "@/components/SettingsForm";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { getConfig } from "@/lib/scheduleData";
-import { getBusinessAddress } from "@/lib/settingsData";
+import { getAdminPhone, getBusinessAddress, getBusinessName } from "@/lib/settingsData";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const [config, address] = await Promise.all([getConfig(), getBusinessAddress()]);
+  const [config, address, adminPhone, businessName] = await Promise.all([
+    getConfig(),
+    getBusinessAddress(),
+    getAdminPhone(),
+    getBusinessName(),
+  ]);
 
   return (
     <div className="max-w-lg space-y-8">
@@ -19,7 +24,7 @@ export default async function SettingsPage() {
         </div>
 
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6">
-          <SettingsForm current={{ ...config, address }} />
+          <SettingsForm current={{ ...config, address, adminPhone, businessName }} />
         </div>
       </div>
 

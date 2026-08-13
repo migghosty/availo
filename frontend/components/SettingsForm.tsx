@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { MAX_ADDRESS_LENGTH } from "@/lib/settings";
+import { PhoneField } from "@/components/PhoneField";
 
 const INTERVAL_OPTIONS = [10, 15, 20, 30, 60];
 const HORIZON_OPTIONS = [7, 14, 30, 60, 90];
@@ -13,6 +14,8 @@ export type SettingsValues = {
   slotIntervalMin: number;
   bookingHorizonDays: number;
   address: string;
+  adminPhone: string;
+  businessName: string;
 };
 
 function PillGroup({
@@ -66,7 +69,9 @@ export function SettingsForm({ current }: { current: SettingsValues }) {
   const isDirty =
     values.slotIntervalMin !== current.slotIntervalMin ||
     values.bookingHorizonDays !== current.bookingHorizonDays ||
-    values.address !== current.address;
+    values.address !== current.address ||
+    values.adminPhone !== current.adminPhone ||
+    values.businessName !== current.businessName;
 
   function set<K extends keyof SettingsValues>(key: K, value: SettingsValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -132,11 +137,33 @@ export function SettingsForm({ current }: { current: SettingsValues }) {
         onChange={(v) => set("bookingHorizonDays", v)}
       />
 
-      {/* Not a scheduling knob like the pills above, so it sits below a divider. */}
+      {/* Not scheduling knobs like the pills above, so these sit below a divider. */}
       <div className="pt-6 border-t border-gray-100 dark:border-slate-800">
         <label
-          htmlFor="address"
+          htmlFor="businessName"
           className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2"
+        >
+          Business name
+        </label>
+        <input
+          id="businessName"
+          name="businessName"
+          type="text"
+          maxLength={60}
+          value={values.businessName}
+          onChange={(e) => set("businessName", e.target.value)}
+          placeholder="Ada's Barbershop"
+          className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+        />
+        <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">
+          Shown in the site header, in every text you send, on calendar events
+          and on your policy pages. Match the name you register with the phone
+          carriers, or your text messages won&apos;t match what they approved.
+        </p>
+
+        <label
+          htmlFor="address"
+          className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2 mt-6"
         >
           Address
         </label>
@@ -155,6 +182,26 @@ export function SettingsForm({ current }: { current: SettingsValues }) {
           &ldquo;Add to calendar&rdquo;, so their phone can map it. Leave empty to
           include no location.
         </p>
+
+        <div className="mt-6">
+          <label
+            htmlFor="adminPhone"
+            className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2"
+          >
+            Your phone number
+          </label>
+          <PhoneField
+            id="adminPhone"
+            name="adminPhone"
+            defaultValue={current.adminPhone}
+            onValueChange={(value) => set("adminPhone", value)}
+            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          />
+          <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">
+            Texted when someone books or cancels. Leave empty to turn those
+            notifications off — clients still get theirs either way.
+          </p>
+        </div>
       </div>
 
       {error && (

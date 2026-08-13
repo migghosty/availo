@@ -1,6 +1,7 @@
 "use server";
 
 import { createBooking } from "@/lib/booking";
+import { getOrigin } from "@/lib/siteUrl";
 import { redirect } from "next/navigation";
 
 export async function bookSlotAction(
@@ -14,6 +15,10 @@ export async function bookSlotAction(
     serviceId,
     clientName: (formData.get("clientName") as string) ?? "",
     clientPhone: (formData.get("clientPhone") as string) ?? "",
+    // An unchecked box submits nothing at all; "on" is what a ticked one sends.
+    smsConsent: formData.get("smsConsent") === "on",
+    // Resolved at the request edge — getOrigin() reads headers.
+    origin: await getOrigin(),
   });
 
   if (!result.ok) return result.message;

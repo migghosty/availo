@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { toCalendarEvent } from "@/lib/bookingEvent";
 import { buildIcs } from "@/lib/calendar";
-import { getBusinessAddress } from "@/lib/settingsData";
+import { getBusinessAddress, getBusinessName } from "@/lib/settingsData";
 import { getOrigin } from "@/lib/siteUrl";
 
 /**
@@ -31,8 +31,12 @@ export async function GET(
     return new Response("Booking not found", { status: 404 });
   }
 
-  const [origin, address] = await Promise.all([getOrigin(), getBusinessAddress()]);
-  const ics = buildIcs(toCalendarEvent(booking, { origin, address }));
+  const [origin, address, businessName] = await Promise.all([
+    getOrigin(),
+    getBusinessAddress(),
+    getBusinessName(),
+  ]);
+  const ics = buildIcs(toCalendarEvent(booking, { origin, address, businessName }));
 
   return new Response(ics, {
     headers: {

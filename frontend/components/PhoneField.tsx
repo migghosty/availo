@@ -28,6 +28,7 @@ export function PhoneField({
   required = false,
   placeholder = "(619) 123-4567",
   className = "",
+  onValueChange,
 }: {
   id: string;
   name: string;
@@ -35,8 +36,19 @@ export function PhoneField({
   required?: boolean;
   placeholder?: string;
   className?: string;
+  /**
+   * Optional, for parents that submit as JSON rather than as a native form
+   * post — the settings form reads its state, not the DOM. The booking and
+   * lookup forms submit normally and don't need it.
+   */
+  onValueChange?: (value: string) => void;
 }) {
   const [value, setValue] = useState(() => formatPhoneInput(defaultValue));
+
+  function update(next: string) {
+    setValue(next);
+    onValueChange?.(next);
+  }
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const input = event.target;
@@ -45,7 +57,7 @@ export function PhoneField({
     // end mid-edit. Only reformat while typing at the end — an edit in the
     // middle is left exactly as-is and tidied on blur instead.
     const atEnd = input.selectionStart === input.value.length;
-    setValue(atEnd ? formatPhoneInput(input.value) : input.value);
+    update(atEnd ? formatPhoneInput(input.value) : input.value);
   }
 
   return (
@@ -59,7 +71,7 @@ export function PhoneField({
       placeholder={placeholder}
       value={value}
       onChange={handleChange}
-      onBlur={() => setValue(formatPhoneInput(value))}
+      onBlur={() => update(formatPhoneInput(value))}
       className={className}
     />
   );

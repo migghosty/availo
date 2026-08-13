@@ -5,6 +5,7 @@ import { ServiceChip } from "@/components/ServiceChip";
 import { isStartBookable } from "@/lib/availability";
 import { loadAvailabilityInputs } from "@/lib/scheduleData";
 import { getBookableService } from "@/lib/serviceData";
+import { isSmsConfigured } from "@/lib/sms";
 import { BUSINESS_TIMEZONE } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
@@ -101,7 +102,14 @@ export default async function BookSlotPage({
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6">
-        <BookingForm startMs={startMs} serviceId={service.id} />
+        {/* The consent checkbox promises a text, so it only appears when texts
+            can actually be sent. `createBooking` relaxes its own consent check
+            under the same condition — the two must stay in step. */}
+        <BookingForm
+          startMs={startMs}
+          serviceId={service.id}
+          askForSmsConsent={isSmsConfigured()}
+        />
       </div>
     </div>
   );
