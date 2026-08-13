@@ -40,7 +40,7 @@ let eyebrows: number; // 15 min, $10
 let hairAndBeard: number; // 60 min, $40
 let retired: number; // 30 min, archived
 
-const client = { clientName: "Ada Lovelace", clientEmail: "ada@example.com" };
+const client = { clientName: "Ada Lovelace", clientPhone: "(619) 123-4567" };
 
 beforeAll(async () => {
   // The global setup already checked, but this file is the one issuing the
@@ -186,40 +186,80 @@ describe("validation", () => {
       start: at430pm,
       serviceId: haircut,
       clientName: "A",
-      clientEmail: "a@b.co",
+      clientPhone: "(619) 123-4567",
     });
 
     expect(result).toMatchObject({ ok: false, code: "INVALID_NAME" });
     expect(await db.booking.count()).toBe(0);
   });
 
-  it("rejects a malformed email", async () => {
-    for (const clientEmail of ["nope", "no@domain", "@example.com", "a b@example.com"]) {
+  it("rejects a phone number it could not have stored", async () => {
+    const malformed = [
+      "nope",
+      "12345",
+      "619-123-456", // nine digits
+      "+44 20 7946 0958", // not NANP
+      "(019) 123-4567", // no area code starts with 0
+      "",
+    ];
+
+    for (const clientPhone of malformed) {
       const result = await createBooking({
         start: at430pm,
         serviceId: haircut,
         clientName: "Ada",
-        clientEmail,
+        clientPhone,
       });
-      expect(result).toMatchObject({ ok: false, code: "INVALID_EMAIL" });
+      expect(result).toMatchObject({ ok: false, code: "INVALID_PHONE" });
     }
 
     expect(await db.booking.count()).toBe(0);
   });
 
-  it("trims the name and normalizes the email to lowercase", async () => {
+  it("trims the name and stores the phone number in canonical form", async () => {
     const result = await createBooking({
       start: at430pm,
       serviceId: haircut,
       clientName: "  Ada Lovelace  ",
-      clientEmail: "  ADA@Example.COM  ",
+      clientPhone: "  (619) 123-4567  ",
     });
 
     expect(result.ok).toBe(true);
 
     const row = await db.booking.findFirst();
     expect(row?.clientName).toBe("Ada Lovelace");
-    expect(row?.clientEmail).toBe("ada@example.com");
+    expect(row?.clientPhone).toBe("+16191234567");
+  });
+
+  it("finds every spelling of one number under a single stored value", async () => {
+    // The actual requirement, end to end: six clients typing the same number
+    // six different ways must all be reachable by one lookup. A unit test can
+    // prove the normalizer agrees with itself; only this proves the column
+    // ends up holding one value that `/my-booking` can match exactly.
+    const spellings = [
+      "(619) 123-4567",
+      "6191234567",
+      "619-123-4567",
+      "619.123.4567",
+      "+1 (619) 123-4567",
+      "1-619-123-4567",
+    ];
+
+    // Non-overlapping 30-minute starts, so availability never rejects one.
+    for (const [i, clientPhone] of spellings.entries()) {
+      const result = await createBooking({
+        start: instantForDateMinute(targetDate, 16 * HOUR + i * 30),
+        serviceId: haircut,
+        clientName: "Ada Lovelace",
+        clientPhone,
+      });
+      expect(result.ok).toBe(true);
+    }
+
+    const found = await db.booking.findMany({
+      where: { clientPhone: "+16191234567" },
+    });
+    expect(found).toHaveLength(spellings.length);
   });
 });
 
@@ -277,7 +317,7 @@ describe("availability is re-derived, never trusted", () => {
       start: at445pm,
       serviceId: haircut,
       clientName: "Grace Hopper",
-      clientEmail: "grace@example.com",
+      clientPhone: "(619) 987-6543",
     });
 
     expect(second).toMatchObject({ ok: false, code: "UNAVAILABLE" });
@@ -291,7 +331,7 @@ describe("availability is re-derived, never trusted", () => {
       start: at500pm,
       serviceId: haircut,
       clientName: "Grace Hopper",
-      clientEmail: "grace@example.com",
+      clientPhone: "(619) 987-6543",
     });
 
     expect(next.ok).toBe(true);
@@ -309,7 +349,7 @@ describe("availability is re-derived, never trusted", () => {
       start: at415pm,
       serviceId: haircut,
       clientName: "Grace Hopper",
-      clientEmail: "grace@example.com",
+      clientPhone: "(619) 987-6543",
     });
 
     expect(long.ok).toBe(true);
@@ -327,13 +367,13 @@ describe("concurrent double-booking", () => {
         start: at430pm,
         serviceId: haircut,
         clientName: "Ada Lovelace",
-        clientEmail: "ada@example.com",
+        clientPhone: "(619) 123-4567",
       }),
       createBooking({
         start: at445pm,
         serviceId: haircut,
         clientName: "Grace Hopper",
-        clientEmail: "grace@example.com",
+        clientPhone: "(619) 987-6543",
       }),
     ]);
 
@@ -356,13 +396,13 @@ describe("concurrent double-booking", () => {
         start: at400pm,
         serviceId: hairAndBeard,
         clientName: "Ada Lovelace",
-        clientEmail: "ada@example.com",
+        clientPhone: "(619) 123-4567",
       }),
       createBooking({
         start: at445pm,
         serviceId: eyebrows,
         clientName: "Grace Hopper",
-        clientEmail: "grace@example.com",
+        clientPhone: "(619) 987-6543",
       }),
     ]);
 
@@ -380,13 +420,13 @@ describe("concurrent double-booking", () => {
         start: at430pm,
         serviceId: haircut,
         clientName: "Ada Lovelace",
-        clientEmail: "ada@example.com",
+        clientPhone: "(619) 123-4567",
       }),
       createBooking({
         start: at500pm,
         serviceId: haircut,
         clientName: "Grace Hopper",
-        clientEmail: "grace@example.com",
+        clientPhone: "(619) 987-6543",
       }),
     ]);
 
@@ -409,7 +449,7 @@ describe("concurrent double-booking", () => {
           start,
           serviceId: haircut,
           clientName: "Ada Lovelace",
-          clientEmail: `client${i}@example.com`,
+          clientPhone: `619555${String(100 + i).padStart(4, "0")}`,
         })
       )
     );
@@ -425,13 +465,13 @@ describe("concurrent double-booking", () => {
         start: at430pm,
         serviceId: haircut,
         clientName: "Ada Lovelace",
-        clientEmail: "ada@example.com",
+        clientPhone: "(619) 123-4567",
       }),
       createBooking({
         start: at430pm,
         serviceId: eyebrows,
         clientName: "Grace Hopper",
-        clientEmail: "grace@example.com",
+        clientPhone: "(619) 987-6543",
       }),
     ]);
 

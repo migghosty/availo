@@ -3,11 +3,11 @@ import { createBooking } from "@/lib/booking";
 import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const { startTime, serviceId, clientName, clientEmail } = await req.json();
+  const { startTime, serviceId, clientName, clientPhone } = await req.json();
 
-  if (!startTime || !clientName?.trim() || !clientEmail?.trim()) {
+  if (!startTime || !clientName?.trim() || !clientPhone?.trim()) {
     return Response.json(
-      { error: "startTime, clientName, and clientEmail are required" },
+      { error: "startTime, clientName, and clientPhone are required" },
       { status: 400 }
     );
   }
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     start,
     serviceId: service,
     clientName,
-    clientEmail,
+    clientPhone,
   });
 
   if (!result.ok) {

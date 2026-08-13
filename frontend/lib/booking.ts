@@ -17,10 +17,11 @@ import { isStartBookable } from "./availability";
 import { isSerializationFailure, isUniqueViolation } from "./dbErrors";
 import { loadAvailabilityInputs } from "./scheduleData";
 import { getBookableService } from "./serviceData";
+import { normalizePhone } from "./phone";
 
 export type BookingFailure =
   | "INVALID_NAME"
-  | "INVALID_EMAIL"
+  | "INVALID_PHONE"
   | "INVALID_SERVICE"
   | "UNAVAILABLE"
   | "ERROR";
@@ -28,8 +29,6 @@ export type BookingFailure =
 export type BookingResult =
   | { ok: true; cancelToken: string }
   | { ok: false; code: BookingFailure; message: string };
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Serializable isolation aborts transactions that *might* not be serializable,
@@ -62,15 +61,14 @@ export async function createBooking({
   start,
   serviceId,
   clientName,
-  clientEmail,
+  clientPhone,
 }: {
   start: Date;
   serviceId: number;
   clientName: string;
-  clientEmail: string;
+  clientPhone: string;
 }): Promise<BookingResult> {
   const name = clientName.trim();
-  const email = clientEmail.trim().toLowerCase();
 
   if (name.length < 2) {
     return {
@@ -80,11 +78,17 @@ export async function createBooking({
     };
   }
 
-  if (!EMAIL_PATTERN.test(email)) {
+  // Normalizing and validating are one step: any spelling that can't be
+  // collapsed to a canonical number is exactly the input we have to reject.
+  const phone = normalizePhone(clientPhone);
+
+  if (!phone) {
     return {
       ok: false,
-      code: "INVALID_EMAIL",
-      message: "A valid email address is required.",
+      code: "INVALID_PHONE",
+      // The example is load-bearing — after a rejection this message is the
+      // only place a client learns which numbers are accepted.
+      message: "Enter a US or Canada phone number, e.g. (619) 123-4567.",
     };
   }
 
@@ -129,7 +133,7 @@ export async function createBooking({
               serviceName: service.name,
               servicePriceCents: service.priceCents,
               clientName: name,
-              clientEmail: email,
+              clientPhone: phone,
               cancelToken,
             },
           });

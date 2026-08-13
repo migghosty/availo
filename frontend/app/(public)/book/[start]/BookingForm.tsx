@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { bookSlotAction } from "./actions";
+import { PhoneField } from "@/components/PhoneField";
 
 export function BookingForm({
   startMs,
@@ -30,17 +31,19 @@ export function BookingForm({
       </div>
 
       <div>
-        <label htmlFor="clientEmail" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-          Email address
+        <label htmlFor="clientPhone" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+          Phone number
         </label>
-        <input
-          id="clientEmail"
-          name="clientEmail"
-          type="email"
-          autoComplete="email"
+        <PhoneField
+          id="clientPhone"
+          name="clientPhone"
           required
           className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
         />
+        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+          So we can reach you about this appointment — and how you&apos;ll look
+          it up later.
+        </p>
       </div>
 
       {error && (

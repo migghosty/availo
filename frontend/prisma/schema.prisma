@@ -24,7 +24,10 @@ model Booking {
   /// later never resizes an appointment somebody already confirmed.
   durationMinutes Int
   clientName      String
-  clientEmail     String
+  /// E.164, e.g. "+16191234567". Always written through normalizePhone() in
+  /// lib/phone.ts so every spelling a client might type lands on one value —
+  /// this is the /my-booking lookup key, and an exact match is all it does.
+  clientPhone     String
   cancelToken     String   @unique
   createdAt       DateTime @default(now())
 
@@ -39,6 +42,7 @@ model Booking {
 
   @@index([startTime])
   @@index([serviceId])
+  @@index([clientPhone])
 }
 
 model Settings {
