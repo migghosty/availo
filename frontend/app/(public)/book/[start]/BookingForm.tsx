@@ -8,9 +8,17 @@ import { PhoneField } from "@/components/PhoneField";
 export function BookingForm({
   startMs,
   serviceId,
+  askForSmsConsent,
 }: {
   startMs: number;
   serviceId: number;
+  /**
+   * Whether texting is switched on. Passed down rather than read here: this is
+   * a client component, and the Twilio config is server-only. Asking for
+   * consent to something that cannot happen would be a promise the app can't
+   * keep, so the box is absent until SMS is live.
+   */
+  askForSmsConsent: boolean;
 }) {
   const boundAction = bookSlotAction.bind(null, startMs, serviceId);
   const [error, formAction, isPending] = useActionState(boundAction, null);
@@ -52,6 +60,7 @@ export function BookingForm({
           about what. This block is also what gets screenshotted for the A2P
           10DLC campaign registration, so its wording and the samples submitted
           there have to agree. */}
+      {askForSmsConsent && (
       <div className="flex items-start gap-3 pt-1">
         <input
           id="smsConsent"
@@ -84,6 +93,7 @@ export function BookingForm({
           </Link>
         </label>
       </div>
+      )}
 
       {error && (
         <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-lg px-3 py-2">

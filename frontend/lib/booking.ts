@@ -19,6 +19,7 @@ import { loadAvailabilityInputs } from "./scheduleData";
 import { getBookableService } from "./serviceData";
 import { normalizePhone } from "./phone";
 import { notifyBookingCreated } from "./notifications";
+import { isSmsConfigured } from "./sms";
 
 export type BookingFailure =
   | "INVALID_NAME"
@@ -109,10 +110,15 @@ export async function createBooking({
     };
   }
 
-  // Re-checked server-side for the same reason the start time is: a checkbox
-  // is trivially removed from the DOM, and this is the record that has to hold
-  // up if a carrier or a complaint ever asks.
-  if (!smsConsent) {
+  // Only demanded when texting is actually switched on. The booking form hides
+  // the checkbox under the same condition (`isSmsConfigured()`), and the two
+  // have to move together: requiring consent the form never asked for would
+  // reject every booking.
+  //
+  // When it *is* asked for, it's re-checked here for the same reason the start
+  // time is — a checkbox is trivially removed from the DOM, and this is the
+  // record that has to hold up if a carrier or a complaint ever asks.
+  if (isSmsConfigured() && !smsConsent) {
     return {
       ok: false,
       code: "CONSENT_REQUIRED",
@@ -166,11 +172,17 @@ export async function createBooking({
               clientName: name,
               clientPhone: phone,
               cancelToken,
-              smsConsentAt: new Date(),
+              // Only stamped when consent was actually asked for and given —
+              // an unasked-for "yes" would be worthless as evidence.
+              smsConsentAt: smsConsent ? new Date() : null,
             },
           });
 
-          return { serviceName: service.name };
+          return {
+            serviceName: service.name,
+            servicePriceCents: service.priceCents,
+            durationMinutes: service.durationMinutes,
+          };
         },
         { isolationLevel: "Serializable" }
       );
@@ -183,6 +195,8 @@ export async function createBooking({
         {
           startTime: start,
           serviceName: booked.serviceName,
+          servicePriceCents: booked.servicePriceCents,
+          durationMinutes: booked.durationMinutes,
           clientName: name,
           clientPhone: phone,
           cancelToken,

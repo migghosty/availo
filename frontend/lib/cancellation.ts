@@ -13,12 +13,16 @@
 
 import { db } from "./db";
 import { notifyBookingCancelled } from "./notifications";
+import type { AlertableBooking } from "./adminAlerts";
 import type { NotifiableBooking } from "./bookingSms";
 
 export type CancelledBy = "client" | "admin";
 
+/** Everything either channel's copy needs: SMS is terse, Telegram is not. */
+export type CancelledBooking = AlertableBooking & NotifiableBooking;
+
 export type CancelResult =
-  | { ok: true; booking: NotifiableBooking }
+  | { ok: true; booking: CancelledBooking }
   | { ok: false };
 
 /** Either identifier works; the token is the client's, the id is the admin's. */

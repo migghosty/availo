@@ -1,17 +1,26 @@
 /**
- * Who gets told what, and when.
+ * Who gets told what, over which channel.
  *
- * Sits between the copy (`bookingSms.ts`, pure) and the transport (`sms.ts`,
- * the only outbound call) because it needs the database — the admin's number,
- * the business name and the opt-out list all live there. Keeping that
- * dependency here is what lets `sms.ts` and its tests stay clear of Prisma.
+ * Sits between the copy (`bookingSms.ts` and `adminAlerts.ts`, both pure) and
+ * the transports (`sms.ts`, `telegram.ts` — the only outbound calls) because it
+ * needs the database: the admin's number, the business name and the opt-out
+ * list all live there. Keeping that dependency here is what lets the transports
+ * and their tests stay clear of Prisma.
+ *
+ * **The admin and the client are on different channels, for different reasons.**
+ * The admin is one known person who can install anything, so alerts go to
+ * Telegram — free, instant, and needing no carrier registration. Clients only
+ * gave a phone number, so they can only be reached by SMS, which stays dormant
+ * until A2P 10DLC registration is done. Setting the Twilio env vars is all it
+ * takes to switch that on.
  *
  * **Nothing in this module throws.** A booking or a cancellation that has
- * already committed is real whether or not a text went out, so every path is
+ * already committed is real whether or not an alert went out, so every path is
  * wrapped. If reliable delivery ever matters more than this, the answer is a
  * retry queue, not an exception the caller has to handle.
  */
 
+import { clientCancelledAlert, newBookingAlert, type AlertableBooking } from "./adminAlerts";
 import {
   adminClientCancelled,
   adminNewBooking,
@@ -22,10 +31,11 @@ import {
 import { db } from "./db";
 import { getAdminPhone, getBusinessAddress, getBusinessName } from "./settingsData";
 import { sendSms } from "./sms";
+import { isTelegramConfigured, sendTelegram } from "./telegram";
 
 /**
- * `sendSms` already swallows its own failures, but these functions also read
- * Settings and format dates — this covers everything else.
+ * `sendSms` and `sendTelegram` already swallow their own failures, but these
+ * functions also read Settings and format dates — this covers everything else.
  */
 async function neverThrows(what: string, run: () => Promise<void>): Promise<void> {
   try {
@@ -56,20 +66,44 @@ async function sendUnlessOptedOut(to: string, body: string): Promise<void> {
 }
 
 /**
- * Confirmation to the client, heads-up to the admin.
+ * Alerts the admin over exactly one channel.
  *
- * The two sends are independent: an unset admin number, an opted-out client, or
- * a failure reaching one party must not stop the other from being told.
+ * Telegram wins when configured; admin SMS is the fallback for once 10DLC
+ * registration is done. Never both — one alert per event, whatever is set up.
+ * Both admin-facing events route through here so they can't drift apart on
+ * which channel they use.
+ */
+async function alertAdmin({
+  telegramText,
+  smsText,
+}: {
+  telegramText: string;
+  smsText: string;
+}): Promise<void> {
+  if (isTelegramConfigured()) {
+    await sendTelegram(telegramText);
+    return;
+  }
+
+  // An unset admin number means these alerts are simply off.
+  const adminPhone = await getAdminPhone();
+  if (adminPhone) await sendUnlessOptedOut(adminPhone, smsText);
+}
+
+/**
+ * Confirmation to the client, alert to the admin.
+ *
+ * The two are independent: an unconfigured admin channel, an opted-out client,
+ * or a failure reaching one party must not stop the other from being told.
  */
 export async function notifyBookingCreated(
-  booking: NotifiableBooking,
+  booking: AlertableBooking & NotifiableBooking,
   { origin }: { origin?: string } = {}
 ): Promise<void> {
   await neverThrows("booking-created notification", async () => {
     // The admin doesn't need telling where their own shop is, so the address
     // goes only to the client.
-    const [adminPhone, address, businessName] = await Promise.all([
-      getAdminPhone(),
+    const [address, businessName] = await Promise.all([
       getBusinessAddress(),
       getBusinessName(),
     ]);
@@ -79,16 +113,17 @@ export async function notifyBookingCreated(
         booking.clientPhone,
         clientBookingConfirmed(booking, { businessName, origin, address })
       ),
-      adminPhone
-        ? sendUnlessOptedOut(adminPhone, adminNewBooking(booking, { businessName }))
-        : Promise.resolve(),
+      alertAdmin({
+        telegramText: newBookingAlert(booking, { businessName }),
+        smsText: adminNewBooking(booking, { businessName }),
+      }),
     ]);
   });
 }
 
 /** Tells whichever party did *not* do the cancelling. */
 export async function notifyBookingCancelled(
-  booking: NotifiableBooking,
+  booking: AlertableBooking & NotifiableBooking,
   cancelledBy: "client" | "admin",
   { origin }: { origin?: string } = {}
 ): Promise<void> {
@@ -96,14 +131,10 @@ export async function notifyBookingCancelled(
     const businessName = await getBusinessName();
 
     if (cancelledBy === "client") {
-      // An unset admin number means these notifications are simply off.
-      const adminPhone = await getAdminPhone();
-      if (adminPhone) {
-        await sendUnlessOptedOut(
-          adminPhone,
-          adminClientCancelled(booking, { businessName })
-        );
-      }
+      await alertAdmin({
+        telegramText: clientCancelledAlert(booking, { businessName }),
+        smsText: adminClientCancelled(booking, { businessName }),
+      });
       return;
     }
 

@@ -658,20 +658,8 @@ describe("what actually gets sent", () => {
 });
 
 describe("SMS consent", () => {
-  it("refuses to book without it", async () => {
-    // Re-checked server-side because a checkbox is trivially removed from the
-    // DOM, and this record is what has to hold up if a carrier ever asks.
-    const result = await createBooking({
-      start: at430pm,
-      serviceId: haircut,
-      clientName: "Ada Lovelace",
-      clientPhone: "(619) 123-4567",
-      smsConsent: false,
-    });
-
-    expect(result).toMatchObject({ ok: false, code: "CONSENT_REQUIRED" });
-    expect(await db.booking.count()).toBe(0);
-  });
+  // Whether consent is *demanded* depends on SMS being configured; that pair of
+  // cases lives in "consent is asked for only when SMS can send" below.
 
   it("records when it was given", async () => {
     const before = new Date();
@@ -767,5 +755,157 @@ describe("opt-out suppression", () => {
     await createBooking({ start: at430pm, serviceId: haircut, ...client });
 
     expect(sent.get("+16191234567")).toContain("Reply STOP to opt out.");
+  });
+});
+
+describe("admin alert channel precedence", () => {
+  afterEach(async () => {
+    for (const key of [
+      "TWILIO_ACCOUNT_SID",
+      "TWILIO_AUTH_TOKEN",
+      "TWILIO_FROM_NUMBER",
+      "TELEGRAM_BOT_TOKEN",
+      "TELEGRAM_CHAT_ID",
+    ]) {
+      delete process.env[key];
+    }
+    vi.restoreAllMocks();
+    await db.settings.update({ where: { id: 1 }, data: { adminPhone: "" } });
+  });
+
+  /** Records which host each outbound call went to, and with what body. */
+  function captureCalls(): Array<{ host: string; body: string }> {
+    const calls: Array<{ host: string; body: string }> = [];
+
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+      const raw = (init as RequestInit).body;
+      calls.push({
+        host: new URL(String(url)).host,
+        body: typeof raw === "string" ? raw : String(raw),
+      });
+      return new Response("{}", { status: 200 });
+    });
+
+    return calls;
+  }
+
+  function configureTwilio() {
+    process.env.TWILIO_ACCOUNT_SID = "ACtest";
+    process.env.TWILIO_AUTH_TOKEN = "token";
+    process.env.TWILIO_FROM_NUMBER = "+15550000000";
+  }
+
+  function configureTelegram() {
+    process.env.TELEGRAM_BOT_TOKEN = "8123456789:AAHtest";
+    process.env.TELEGRAM_CHAT_ID = "123456789";
+  }
+
+  it("alerts over Telegram, and does not also text the admin", async () => {
+    // The point of the precedence rule: one alert per event, never two.
+    configureTwilio();
+    configureTelegram();
+    await db.settings.update({ where: { id: 1 }, data: { adminPhone: "+16195550100" } });
+    const calls = captureCalls();
+
+    await createBooking({ start: at430pm, serviceId: haircut, ...client });
+
+    const telegram = calls.filter((c) => c.host === "api.telegram.org");
+    const toAdminBySms = calls.filter((c) => c.body.includes("%2B16195550100"));
+
+    expect(telegram).toHaveLength(1);
+    expect(toAdminBySms).toHaveLength(0);
+    expect(decodeURIComponent(telegram[0].body)).toContain("Ada Lovelace");
+  });
+
+  it("falls back to admin SMS when Telegram isn't configured", async () => {
+    configureTwilio();
+    await db.settings.update({ where: { id: 1 }, data: { adminPhone: "+16195550100" } });
+    const calls = captureCalls();
+
+    await createBooking({ start: at430pm, serviceId: haircut, ...client });
+
+    expect(calls.some((c) => c.host === "api.telegram.org")).toBe(false);
+    expect(calls.some((c) => c.body.includes("%2B16195550100"))).toBe(true);
+  });
+
+  it("still confirms the client by SMS while alerting the admin on Telegram", async () => {
+    // The two parties are on different channels; neither should suppress the
+    // other.
+    configureTwilio();
+    configureTelegram();
+    const calls = captureCalls();
+
+    await createBooking({ start: at430pm, serviceId: haircut, ...client });
+
+    expect(calls.some((c) => c.host === "api.telegram.org")).toBe(true);
+    expect(calls.some((c) => c.body.includes("%2B16191234567"))).toBe(true);
+  });
+
+  it("alerts on Telegram when a client cancels", async () => {
+    configureTelegram();
+    const created = await createBooking({ start: at430pm, serviceId: haircut, ...client });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const calls = captureCalls();
+    await cancelBooking({ cancelToken: created.cancelToken }, "client");
+
+    const telegram = calls.filter((c) => c.host === "api.telegram.org");
+    expect(telegram).toHaveLength(1);
+    expect(decodeURIComponent(telegram[0].body)).toMatch(/cancelled/i);
+  });
+
+  it("books fine with no channel configured at all", async () => {
+    const calls = captureCalls();
+
+    const result = await createBooking({ start: at430pm, serviceId: haircut, ...client });
+
+    expect(result.ok).toBe(true);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("consent is asked for only when SMS can send", () => {
+  afterEach(() => {
+    delete process.env.TWILIO_ACCOUNT_SID;
+    delete process.env.TWILIO_AUTH_TOKEN;
+    delete process.env.TWILIO_FROM_NUMBER;
+    vi.restoreAllMocks();
+  });
+
+  it("books without consent while SMS is switched off", async () => {
+    // The booking form hides the checkbox under the same condition, so
+    // demanding it here would reject every booking.
+    const result = await createBooking({
+      start: at430pm,
+      serviceId: haircut,
+      clientName: "Ada Lovelace",
+      clientPhone: "(619) 123-4567",
+      smsConsent: false,
+    });
+
+    expect(result.ok).toBe(true);
+
+    const row = await db.booking.findFirst();
+    // Nothing was agreed to, so nothing is claimed as evidence.
+    expect(row?.smsConsentAt).toBeNull();
+  });
+
+  it("demands consent once SMS is switched on", async () => {
+    process.env.TWILIO_ACCOUNT_SID = "ACtest";
+    process.env.TWILIO_AUTH_TOKEN = "token";
+    process.env.TWILIO_FROM_NUMBER = "+15550000000";
+
+    const result = await createBooking({
+      start: at430pm,
+      serviceId: haircut,
+      clientName: "Ada Lovelace",
+      clientPhone: "(619) 123-4567",
+      smsConsent: false,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: "CONSENT_REQUIRED" });
+    expect(await db.booking.count()).toBe(0);
   });
 });
