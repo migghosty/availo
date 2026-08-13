@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { AddToCalendar } from "@/components/AddToCalendar";
 import { getBusinessAddress } from "@/lib/settingsData";
+import { formatPhone } from "@/lib/phone";
 import { BUSINESS_TIMEZONE } from "@/lib/timezone";
 
 function formatDateTime(date: Date) {
@@ -73,8 +74,10 @@ export default async function BookingConfirmedPage({
             <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.clientName}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-gray-500 dark:text-slate-400">Email</dt>
-            <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.clientEmail}</dd>
+            <dt className="text-gray-500 dark:text-slate-400">Phone</dt>
+            <dd className="font-medium text-slate-700 dark:text-slate-200">
+              {formatPhone(booking.clientPhone)}
+            </dd>
           </div>
           {/* Stacked rather than the justify-between of the rows above: an
               address runs to two or three lines, and squeezing it into the

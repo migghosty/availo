@@ -1,7 +1,9 @@
 import { db } from "@/lib/db";
 import Link from "next/link";
 import { AddToCalendar } from "@/components/AddToCalendar";
+import { PhoneLookupForm } from "@/components/PhoneLookupForm";
 import { getBusinessAddress } from "@/lib/settingsData";
+import { formatPhone, normalizePhone } from "@/lib/phone";
 import { BUSINESS_TIMEZONE } from "@/lib/timezone";
 
 function formatDateTime(date: Date) {
@@ -19,19 +21,26 @@ function formatDateTime(date: Date) {
 export default async function MyBookingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string }>;
+  searchParams: Promise<{ phone?: string }>;
 }) {
-  const { email } = await searchParams;
-  const trimmedEmail = email?.trim().toLowerCase() ?? "";
+  const { phone } = await searchParams;
+  const submitted = phone?.trim() ?? "";
+
+  // The same normalizer the booking path writes through, which is the entire
+  // reason any spelling of a number finds the booking it made.
+  const lookupPhone = submitted ? normalizePhone(submitted) : null;
+  // Something was typed, but it isn't a number we could have stored — say so
+  // rather than running a query that can only come back empty.
+  const invalidFormat = submitted !== "" && lookupPhone === null;
 
   let bookings: Awaited<ReturnType<typeof fetchBookings>> | null = null;
   // One address for every card, so it's loaded once — and only when there is
   // actually a lookup to render.
   let address = "";
 
-  if (trimmedEmail) {
+  if (lookupPhone) {
     [bookings, address] = await Promise.all([
-      fetchBookings(trimmedEmail),
+      fetchBookings(lookupPhone),
       getBusinessAddress(),
     ]);
   }
@@ -41,33 +50,34 @@ export default async function MyBookingPage({
       <div className="mb-7">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Find your booking</h1>
         <p className="text-gray-500 dark:text-slate-400 mt-1 text-sm">
-          Enter the email address you used when booking.
+          Enter the phone number you used when booking.
         </p>
       </div>
 
-      <form method="GET" action="/my-booking" className="flex gap-2 mb-8">
-        <input
-          type="email"
-          name="email"
-          defaultValue={email ?? ""}
-          placeholder="your@email.com"
-          required
-          className="flex-1 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-        />
-        <button
-          type="submit"
-          className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap"
-        >
-          Look up
-        </button>
-      </form>
+      <PhoneLookupForm defaultValue={submitted} />
+
+      {invalidFormat && (
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-8 text-center">
+          <p className="text-gray-600 dark:text-slate-300 font-medium">
+            That doesn&apos;t look like a phone number.
+          </p>
+          <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">
+            Enter a US or Canada number, e.g. (619) 123-4567.
+          </p>
+        </div>
+      )}
 
       {bookings !== null && (
         bookings.length === 0 ? (
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-8 text-center">
             <p className="text-gray-600 dark:text-slate-300 font-medium">No upcoming bookings found.</p>
             <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">
-              No reservations were found for <span className="font-mono">{trimmedEmail}</span>.
+              No reservations were found for{" "}
+              {/* The number as a person reads it, not the +1… we store. */}
+              <span className="font-medium text-gray-500 dark:text-slate-400">
+                {formatPhone(lookupPhone!)}
+              </span>
+              .
             </p>
             <Link
               href="/slots"
@@ -143,10 +153,11 @@ export default async function MyBookingPage({
   );
 }
 
-async function fetchBookings(email: string) {
+/** `phone` must already be normalized — this is an exact match on the stored form. */
+async function fetchBookings(phone: string) {
   return db.booking.findMany({
     where: {
-      clientEmail: email,
+      clientPhone: phone,
       startTime: { gte: new Date() },
     },
     orderBy: { startTime: "asc" },

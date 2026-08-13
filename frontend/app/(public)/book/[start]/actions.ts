@@ -13,7 +13,7 @@ export async function bookSlotAction(
     start: new Date(startMs),
     serviceId,
     clientName: (formData.get("clientName") as string) ?? "",
-    clientEmail: (formData.get("clientEmail") as string) ?? "",
+    clientPhone: (formData.get("clientPhone") as string) ?? "",
   });
 
   if (!result.ok) return result.message;

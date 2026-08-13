@@ -4,6 +4,7 @@ import Link from "next/link";
 import { computeAvailability, windowsForDate, overridesByDate } from "@/lib/availability";
 import { loadAvailabilityInputs } from "@/lib/scheduleData";
 import { getBookableServices } from "@/lib/serviceData";
+import { formatPhone } from "@/lib/phone";
 import { formatWindow } from "@/lib/schedule";
 import {
   BUSINESS_TIMEZONE,
@@ -20,7 +21,7 @@ type Booking = {
   durationMinutes: number;
   serviceName: string;
   clientName: string;
-  clientEmail: string;
+  clientPhone: string;
 };
 
 function formatTime(date: Date) {
@@ -74,9 +75,16 @@ function DayBookings({ bookings, hours }: { bookings: Booking[]; hours: string }
                 <p className="text-sm text-slate-600 dark:text-slate-300 truncate">
                   {booking.clientName}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-slate-400 truncate">
-                  {booking.clientEmail}
-                </p>
+                {/* Tappable: the admin is on a phone, and calling the client is
+                    the one action this row invites. E.164 is exactly what a
+                    tel: href wants, so the stored value goes in the link and
+                    the readable one in the text. p-2 -m-2 for the hit area. */}
+                <a
+                  href={`tel:${booking.clientPhone}`}
+                  className="inline-block text-xs text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 p-2 -m-2 mt-0.5"
+                >
+                  {formatPhone(booking.clientPhone)}
+                </a>
               </div>
               <div className="flex-none">
                 <AdminCancelBookingButton bookingId={booking.id} />
