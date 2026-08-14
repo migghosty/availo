@@ -20,7 +20,87 @@
  */
 
 /** Long enough for a normal API call, short enough not to hold a booking open. */
-const SEND_TIMEOUT_MS = 5_000;
+const ATTEMPT_TIMEOUT_MS = 4_000;
+
+/**
+ * A transient reset lost a real booking alert during testing — one failure in
+ * five sends, with the next attempt succeeding untouched. A single try was
+ * leaving the admin to find that booking on the dashboard instead.
+ */
+const MAX_ATTEMPTS = 3;
+
+/**
+ * The ceiling on *all* attempts together, which is what actually bounds the
+ * damage. This is awaited on the booking request, so without a deadline a
+ * Telegram outage would hold a client's confirmation open for the sum of every
+ * timeout. With it, a hard outage costs a few seconds and then gives up; the
+ * booking is already committed either way.
+ */
+const TOTAL_BUDGET_MS = 9_000;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Full jitter, the same shape as `createBooking`'s retry delay. Short, because
+ * the failure this exists for is a momentary reset rather than congestion.
+ */
+function retryDelayMs(attempt: number): number {
+  return Math.random() * 250 * 2 ** (attempt - 1);
+}
+
+type Attempt =
+  /** Telegram took it. */
+  | { kind: "sent" }
+  /** Telegram said no, and would say no again — a bad token or chat ID. */
+  | { kind: "rejected"; detail: string }
+  /** Something momentary: a reset, a timeout, a 5xx, or a rate limit. */
+  | { kind: "retryable"; detail: string; retryAfterMs?: number };
+
+async function attemptSend(config: TelegramConfig, text: string): Promise<Attempt> {
+  try {
+    const response = await fetch(
+      `https://api.telegram.org/bot${config.token}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: config.chatId,
+          text,
+          // Links in an alert are for the admin's reference, not for reading.
+          disable_web_page_preview: true,
+        }),
+        signal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS),
+      }
+    );
+
+    if (response.ok) return { kind: "sent" };
+
+    // The body carries Telegram's own description, which is the only way to
+    // tell a bad token from a chat the bot was never introduced to.
+    const detail = await response.text().catch(() => "");
+    const status = `${response.status} ${detail}`;
+
+    if (response.status === 429) {
+      // Telegram says how long to wait; honour it, but the deadline still wins.
+      const retryAfter = Number(
+        detail.match(/"retry_after"\s*:\s*(\d+)/)?.[1] ?? NaN
+      );
+      return {
+        kind: "retryable",
+        detail: status,
+        retryAfterMs: Number.isFinite(retryAfter) ? retryAfter * 1_000 : undefined,
+      };
+    }
+
+    // 5xx is Telegram's problem and may pass; 4xx is ours and won't.
+    return response.status >= 500
+      ? { kind: "retryable", detail: status }
+      : { kind: "rejected", detail: status };
+  } catch (error) {
+    // Timeouts, DNS failures, connection resets — the transient class.
+    return { kind: "retryable", detail: String(error) };
+  }
+}
 
 type TelegramConfig = { token: string; chatId: string };
 
@@ -38,8 +118,9 @@ export function isTelegramConfigured(): boolean {
 }
 
 /**
- * Sends one alert. Returns whether Telegram accepted it — never throws, and
- * never makes a request when unconfigured.
+ * Sends one alert, retrying the failures that are worth retrying. Returns
+ * whether Telegram accepted it — never throws, and never makes a request when
+ * unconfigured.
  *
  * Sent as **plain text, with no `parse_mode`**. Telegram's MarkdownV2 and HTML
  * modes require escaping, and every value in these alerts is user-controlled: a
@@ -47,6 +128,10 @@ export function isTelegramConfigured(): boolean {
  * corrupt the message or make the send fail outright. Plain text has no
  * escaping rules to get wrong, and Telegram still auto-links phone numbers and
  * URLs — so a tappable number survives without the risk.
+ *
+ * A rejection is never retried. A bad token or an unknown chat ID fails
+ * identically every time, so retrying only delays the booking response for a
+ * result that cannot change.
  */
 export async function sendTelegram(text: string): Promise<boolean> {
   const config = readConfig();
@@ -57,34 +142,33 @@ export async function sendTelegram(text: string): Promise<boolean> {
     return false;
   }
 
-  try {
-    const response = await fetch(
-      `https://api.telegram.org/bot${config.token}/sendMessage`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: config.chatId,
-          text,
-          // Links in an alert are for the admin's reference, not for reading.
-          disable_web_page_preview: true,
-        }),
-        signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
-      }
-    );
+  const deadline = Date.now() + TOTAL_BUDGET_MS;
 
-    if (!response.ok) {
-      // The body carries Telegram's own description, which is the only way to
-      // tell a bad token from a chat the bot was never introduced to.
-      const detail = await response.text().catch(() => "");
-      console.error(`[telegram] send failed: ${response.status} ${detail}`);
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const outcome = await attemptSend(config, text);
+
+    if (outcome.kind === "sent") return true;
+
+    if (outcome.kind === "rejected") {
+      console.error(`[telegram] send rejected: ${outcome.detail}`);
       return false;
     }
 
-    return true;
-  } catch (error) {
-    // Timeouts, DNS failures, aborts — all non-fatal by design.
-    console.error("[telegram] send threw:", error);
-    return false;
+    const delay = outcome.retryAfterMs ?? retryDelayMs(attempt);
+    const outOfAttempts = attempt === MAX_ATTEMPTS;
+    const outOfTime = Date.now() + delay >= deadline;
+
+    if (outOfAttempts || outOfTime) {
+      console.error(
+        `[telegram] send failed after ${attempt} attempt${attempt === 1 ? "" : "s"}: ` +
+          outcome.detail
+      );
+      return false;
+    }
+
+    console.warn(`[telegram] attempt ${attempt} failed, retrying: ${outcome.detail}`);
+    await sleep(delay);
   }
+
+  return false;
 }
