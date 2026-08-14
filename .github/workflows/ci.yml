@@ -1,7 +1,11 @@
 name: CI
 
+# Push is limited to main so a branch with an open PR doesn't run the whole
+# suite twice (once for the push, once for the PR). Actions minutes are metered
+# on private repos, and the two jobs here spin up a Postgres service container.
 on:
   push:
+    branches: [main]
   pull_request:
 
 # The application lives under frontend/ — there is no root-level package.json.

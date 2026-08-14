@@ -6,7 +6,12 @@
  * Prisma config file when using prisma migrate deploy" — accurate but misleading,
  * because `prisma.config.ts` is fine. The property is empty only because
  * `process.env.DATABASE_URL` was undefined. This turns that into a message that
- * names the two Vercel settings that actually cause it.
+ * names the Vercel setting that actually causes it: environment scope.
+ *
+ * Note the "Sensitive" flag is NOT a cause, despite the intuition that it might be.
+ * Sensitive variables cannot be read back in the dashboard or CLI, but they are
+ * still injected into the build — production deploys here run this same preflight
+ * against a Sensitive DATABASE_URL and pass. Do not un-mark a secret to fix this.
  *
  * The success line matters as much as the failure one: it puts the target host in
  * the build log, so a Preview deployment wired to the production database is
@@ -28,15 +33,19 @@ if (!databaseUrl) {
   console.error(`    Build environment: ${environment}`);
   console.error("");
   console.error("    The build runs `prisma migrate deploy`, so DATABASE_URL is needed at");
-  console.error("    BUILD time, not just at runtime. Two Vercel settings cause this:");
+  console.error("    BUILD time, not just at runtime. The cause is environment scope: the");
+  console.error("    variable must be enabled for the environment being built, and a");
+  console.error("    Production-only value fails every Preview build.");
   console.error("");
-  console.error("      1. Environment scope — the variable must be enabled for the");
-  console.error("         environment being built. A Production-only value fails every");
-  console.error("         Preview build.");
+  console.error("    Each environment gets its OWN database — check the value you add here");
+  console.error("    is the branch for this environment, not the production one. A Preview");
+  console.error("    build runs migrations, so a shared URL would apply an unmerged");
+  console.error("    migration to production.");
   console.error("");
-  console.error("      2. The \"Sensitive\" flag — Vercel decrypts sensitive variables at");
-  console.error("         runtime only and never exposes them to the build, so");
-  console.error("         DATABASE_URL cannot be marked Sensitive.");
+  console.error("      vercel env add DATABASE_URL preview");
+  console.error("");
+  console.error("    The \"Sensitive\" flag is not the problem — sensitive variables are");
+  console.error("    still injected into the build. Do not un-mark it.");
   console.error("");
   console.error("    Vercel → Settings → Environment Variables → DATABASE_URL");
   console.error("    Locally, set it in frontend/.env (the Prisma CLI does not read .env.local).");
