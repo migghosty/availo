@@ -27,6 +27,7 @@ function configure(values: Record<string, string | undefined>) {
 beforeEach(() => {
   // Quiet: these paths log deliberately, and the logs aren't what's under test.
   vi.spyOn(console, "info").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -97,14 +98,6 @@ describe("when configured", () => {
     expect(body.text).toBe("O'Neil & Sons <test> *not bold* _not italic_");
   });
 
-  it("returns false on a rejected request rather than throwing", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response('{"ok":false,"description":"chat not found"}', { status: 400 })
-    );
-
-    await expect(sendTelegram("hello")).resolves.toBe(false);
-  });
-
   it("returns false on a network error rather than throwing", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("ECONNRESET"));
 
@@ -117,5 +110,79 @@ describe("when configured", () => {
     );
 
     await expect(sendTelegram("hello")).resolves.toBe(false);
+  });
+});
+
+describe("retrying", () => {
+  beforeEach(() => configure(CONFIG));
+
+  it("recovers from a transient reset on the next attempt", async () => {
+    // The exact failure observed in testing: one ECONNRESET lost a real
+    // booking alert, and the following send succeeded untouched.
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("read ECONNRESET"))
+      .mockResolvedValue(new Response('{"ok":true}', { status: 200 }));
+
+    expect(await sendTelegram("a new booking")).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up after a bounded number of attempts", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("read ECONNRESET"));
+
+    expect(await sendTelegram("hello")).toBe(false);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("retries a 5xx, which is Telegram's problem and may pass", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("upstream error", { status: 502 }))
+      .mockResolvedValue(new Response('{"ok":true}', { status: 200 }));
+
+    expect(await sendTelegram("hello")).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry a bad chat ID", async () => {
+    // A 400 fails identically every time; retrying only delays the booking
+    // response for a result that cannot change.
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response('{"ok":false,"description":"chat not found"}', { status: 400 })
+      );
+
+    expect(await sendTelegram("hello")).toBe(false);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry a bad token", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response('{"ok":false,"description":"Unauthorized"}', { status: 401 })
+      );
+
+    expect(await sendTelegram("hello")).toBe(false);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives up rather than waiting out a long rate-limit backoff", async () => {
+    // Telegram asks for 60s; the booking response can't wait that long, so the
+    // total budget wins and the alert is dropped.
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        '{"ok":false,"error_code":429,"description":"Too Many Requests: retry after 60",' +
+          '"parameters":{"retry_after":60}}',
+        { status: 429 }
+      )
+    );
+
+    expect(await sendTelegram("hello")).toBe(false);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 });
