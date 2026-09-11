@@ -141,7 +141,7 @@ again.
 
 1. Open the site in **Safari** (not Chrome — only Safari can install to the home screen)
 2. Tap **Share** → **Add to Home Screen**
-3. **Open Availo from the new icon.** This step is the one people skip, and nothing works
+3. **Open the app from the new icon.** This step is the one people skip, and nothing works
    without it
 4. Sign in, go to **Settings**
 5. Under **Notifications on this device**, tap **Turn on notifications** and accept the iOS
@@ -164,8 +164,13 @@ says the subscription expired, turn it off and on again.
 ## Notes
 
 - **The prompt only appears once.** If you tap "Don't Allow", iOS will not ask again —
-  you'd have to change it in iOS Settings → Notifications → Availo Admin, or delete the
+  you'd have to change it in iOS Settings → Notifications → (your business name), or delete the
   home-screen icon and add it back.
+- **The app is named after your business.** The home-screen label and the name above each
+  notification come from **Business name** in the app's Settings. Set it the way you want it
+  *before* adding the icon: iOS reads the name once, at install, so changing it later only
+  takes effect after deleting the icon and adding it again. If the label gets cut off on the
+  home screen, you can type a shorter one in the "Add to Home Screen" sheet.
 - **Preview deployments and production are separate.** A subscription belongs to the exact
   domain it was created on, so turning notifications on from a preview URL does nothing for
   the production site. Do it once on the real domain.

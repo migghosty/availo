@@ -129,7 +129,7 @@ const DASHBOARD_URL = "/admin/dashboard";
 /**
  * Neither composer takes a `businessName`, unlike every other function in this
  * file. A notification is already labelled with the app that sent it — the icon
- * and "Availo Admin" sit right above the title — so repeating the brand would
+ * and the app name sit right above the title — so repeating the brand would
  * only eat the few characters iOS gives the title before truncating. The SMS
  * and Telegram versions need it because a text arrives from an unknown number.
  *

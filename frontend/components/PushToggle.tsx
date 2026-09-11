@@ -107,7 +107,18 @@ async function detectStatus(): Promise<Status> {
   }
 }
 
-export function PushToggle({ vapidPublicKey }: { vapidPublicKey: string | null }) {
+export function PushToggle({
+  vapidPublicKey,
+  appName,
+}: {
+  vapidPublicKey: string | null;
+  /**
+   * What the installed app is called — `Settings.businessName`, the same value
+   * `/admin.webmanifest` gives iOS. Needed because the instructions below name
+   * it, and "Settings → Notifications → <name>" is only useful if it matches.
+   */
+  appName: string;
+}) {
   const [status, setStatus] = useState<Status>("loading");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -259,13 +270,13 @@ export function PushToggle({ vapidPublicKey }: { vapidPublicKey: string | null }
     return (
       <div className="space-y-3">
         <p className={note}>
-          To get notifications on this phone, Availo has to be on your home screen —
+          To get notifications on this phone, {appName} has to be on your home screen —
           Apple only allows them for installed apps.
         </p>
         <ol className="text-sm text-gray-600 dark:text-slate-400 space-y-1 list-decimal pl-5">
           <li>Tap the Share button in Safari — the square with an arrow coming out of it</li>
           <li>Choose “Add to Home Screen”</li>
-          <li>Open Availo from the new icon, then come back to this page</li>
+          <li>Open {appName} from the new icon, then come back to this page</li>
         </ol>
       </div>
     );
@@ -275,7 +286,7 @@ export function PushToggle({ vapidPublicKey }: { vapidPublicKey: string | null }
     return (
       <p className={note}>
         Notifications are blocked for this device. iOS won’t ask again, so it has to be
-        changed in Settings → Notifications → Availo Admin, or by removing the home-screen
+        changed in Settings → Notifications → {appName}, or by removing the home-screen
         icon and adding it back.
       </p>
     );
