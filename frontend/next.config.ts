@@ -20,6 +20,34 @@ const nextConfig: NextConfig = {
    * or 10.0.0.x), add that pattern here too.
    */
   allowedDevOrigins: ["192.168.1.*"],
+
+  async headers() {
+    return [
+      {
+        /**
+         * The service worker must never be cached.
+         *
+         * A browser holding a stale `/sw.js` is close to impossible to fix
+         * remotely — the old worker keeps claiming the scope, and the admin has
+         * no devtools on a phone to unregister it. Push would simply stop
+         * working with nothing to show why. `no-store` costs one tiny request
+         * per app launch.
+         */
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-store, must-revalidate" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          /**
+           * Lets the worker control the whole origin even though nothing
+           * currently registers it from a subpath. Harmless here, and it means
+           * a future registration from /admin doesn't silently get a narrower
+           * scope than the manifest claims.
+           */
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

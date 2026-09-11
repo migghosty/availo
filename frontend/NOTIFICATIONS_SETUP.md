@@ -1,14 +1,21 @@
 # Getting notifications working
 
-Two independent channels, and you almost certainly want the first one only:
+Three independent channels. Set up the first, add the second if you want alerts on your
+phone's lock screen, and treat the third as optional and later:
 
 | | Who it reaches | Registration | Cost | Works |
 |---|---|---|---|---|
 | **Telegram** | You (the admin) | None | Free | Today, in ~2 minutes |
+| **iPhone notifications** | You (the admin) | None | Free | Today, ~5 minutes |
 | **SMS** | Clients | A2P 10DLC, weeks | ~$19 + $2/mo | After approval |
 
-**Nothing breaks while either is unconfigured.** The app runs normally and simply sends
-nothing. Set Telegram up now; treat SMS as optional and later.
+**Nothing breaks while any of them is unconfigured.** The app runs normally and simply
+sends nothing.
+
+Telegram and iPhone notifications both reach you, and that is on purpose — you get both
+for the same booking. Apple's notifications can stop arriving silently (see the caveat in
+section 2), so Telegram stays the channel that always fires and the phone notification is
+the faster, nicer-looking copy.
 
 ---
 
@@ -82,7 +89,92 @@ cancellation, headed `❌ Cancelled by client`.
 
 ---
 
-# 2. SMS to clients — optional, later
+# 2. iPhone notifications — your booking alerts on the lock screen
+
+Real notifications on your phone: banner on the lock screen, badge on the icon, tap to
+open straight to the dashboard. **No App Store, no app to publish, no Apple developer
+account** — it is the same website, installed to your home screen.
+
+## The one thing to understand first
+
+Apple only allows notifications for a site that has been **added to the home screen**, and
+only when you open it *from that icon*. Opening the same URL in Safari gives you no way to
+turn them on — the page will tell you so rather than showing a dead button. This is Apple's
+rule, not a limitation of the app.
+
+You also need **iOS 16.4 or later**, and the site must be on **https** — a real deployment,
+not `npm run dev` over your Wi-Fi.
+
+## Setup
+
+### On the server, once
+
+Generate a key pair (VAPID keys — they identify this app to Apple's push service):
+
+```bash
+cd frontend
+npx web-push generate-vapid-keys
+```
+
+Set three variables wherever the app runs:
+
+```
+VAPID_PUBLIC_KEY=<the public key it printed>
+VAPID_PRIVATE_KEY=<the private key it printed>
+VAPID_SUBJECT=mailto:you@example.com
+```
+
+Locally that's `frontend/.env.local`. On Vercel:
+
+```bash
+vercel env add VAPID_PUBLIC_KEY production
+vercel env add VAPID_PRIVATE_KEY production
+vercel env add VAPID_SUBJECT production
+```
+
+**Use the same key pair in every environment, and don't rotate it casually.** Each
+subscription is tied to the key it was created with, so new keys silently invalidate every
+phone that had already turned notifications on — they'd each have to turn them off and on
+again.
+
+### On your phone, once
+
+1. Open the site in **Safari** (not Chrome — only Safari can install to the home screen)
+2. Tap **Share** → **Add to Home Screen**
+3. **Open Availo from the new icon.** This step is the one people skip, and nothing works
+   without it
+4. Sign in, go to **Settings**
+5. Under **Notifications on this device**, tap **Turn on notifications** and accept the iOS
+   prompt
+6. Tap **Send test notification** — it should arrive within a second or two
+
+Repeat on any other device you want alerts on; it's per device, not per account. Your
+laptop's Chrome works too, and doesn't need the install step.
+
+## The caveat worth knowing
+
+Apple gives no way to find out that notifications have stopped. If you delete the
+home-screen icon, restore the phone, or the subscription just expires, pushes stop and
+**nothing tells you** — you'd only notice bookings arriving with no notification. That is
+exactly why Telegram is still configured: it keeps working regardless.
+
+If you ever suspect it's stopped, open Settings and tap **Send test notification**. If it
+says the subscription expired, turn it off and on again.
+
+## Notes
+
+- **The prompt only appears once.** If you tap "Don't Allow", iOS will not ask again —
+  you'd have to change it in iOS Settings → Notifications → Availo Admin, or delete the
+  home-screen icon and add it back.
+- **Preview deployments and production are separate.** A subscription belongs to the exact
+  domain it was created on, so turning notifications on from a preview URL does nothing for
+  the production site. Do it once on the real domain.
+- **Clients never see any of this.** The manifest is only linked from the admin pages, so
+  nothing invites a client to install anything.
+
+---
+
+# 3. SMS to clients — optional, later
 
 Only needed if you want *clients* texted. Your own alerts don't require any of this.
 
@@ -167,6 +259,7 @@ fails a booking.
 | Log / symptom | Cause |
 |---|---|
 | `[telegram] not configured, skipping` | The two Telegram vars aren't set in that environment |
+| `[push] not configured, skipping notification` | The three `VAPID_*` vars aren't set in that environment |
 | `[telegram] send failed: 401` | Wrong bot token |
 | `[telegram] send failed: 400 ... chat not found` | Wrong chat ID, or you never messaged the bot |
 | `[sms] not configured, skipping` | The three Twilio vars aren't set |
@@ -175,3 +268,7 @@ fails a booking.
 | `30034` | Number not registered to an approved 10DLC campaign |
 | `20003` | Wrong Twilio SID or auth token |
 | Webhook returns 403 | `TWILIO_AUTH_TOKEN` missing, or the webhook URL doesn't exactly match the deployed one |
+| `[push] endpoint gone, removing subscription` | That phone's subscription expired or the icon was deleted — turn notifications off and on again on that device |
+| Settings says "add to your home screen first" | You're in Safari rather than the installed app; open it from the home-screen icon |
+| No prompt when tapping "Turn on notifications" | Permission was refused earlier — iOS never asks twice. Change it in iOS Settings → Notifications, or re-add the icon |
+| Test notification says "No subscribed devices" | The browser thinks it's subscribed but the server has no record; turn it off and on again |

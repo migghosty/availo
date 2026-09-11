@@ -21,11 +21,21 @@ export default async function PublicLayout({
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col">
       <header className="bg-slate-800 dark:bg-slate-900 text-white shadow-md">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-amber-400 text-xl" aria-hidden>✂</span>
-            <span className="font-bold text-lg tracking-tight">{businessName}</span>
+          {/* `min-w-0` + `truncate` let a long trading name ellipsize rather
+              than shove the nav off the bar. With four links plus the toggle,
+              a name like "Ada's Barbershop & Grooming" overflows 390px
+              otherwise — the nav is what must survive, not the full name. */}
+          <Link href="/" className="flex items-center gap-2 min-w-0">
+            <span className="text-amber-400 text-xl flex-none" aria-hidden>✂</span>
+            <span className="font-bold text-lg tracking-tight truncate">{businessName}</span>
           </Link>
-          <div className="flex items-center gap-4 sm:gap-5">
+          <div className="flex items-center gap-3 sm:gap-5 flex-none">
+            <Link
+              href="/about"
+              className="text-sm text-slate-300 hover:text-white transition-colors"
+            >
+              About
+            </Link>
             <Link
               href="/slots"
               className="text-sm text-slate-300 hover:text-white transition-colors"
@@ -54,6 +64,12 @@ export default async function PublicLayout({
           <span>
             &copy; {new Date().getFullYear()} {businessName}
           </span>
+          <Link
+            href="/about"
+            className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors p-2 -m-2"
+          >
+            About
+          </Link>
           <Link
             href="/sms-terms"
             className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors p-2 -m-2"
