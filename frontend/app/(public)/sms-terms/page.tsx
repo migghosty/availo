@@ -1,3 +1,4 @@
+import { Section } from "@/components/Section";
 import { getAdminPhone, getBusinessAddress, getBusinessName } from "@/lib/settingsData";
 import { formatPhone } from "@/lib/phone";
 
@@ -13,19 +14,6 @@ import { formatPhone } from "@/lib/phone";
  */
 
 export const dynamic = "force-dynamic";
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-8">
-      <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 mb-2">
-        {title}
-      </h2>
-      <div className="text-sm text-gray-600 dark:text-slate-300 space-y-3 leading-relaxed">
-        {children}
-      </div>
-    </section>
-  );
-}
 
 export default async function SmsTermsPage() {
   const [businessName, address, adminPhone] = await Promise.all([

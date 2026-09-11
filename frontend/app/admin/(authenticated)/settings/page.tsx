@@ -1,7 +1,9 @@
 import { SettingsForm } from "@/components/SettingsForm";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
+import { PushToggle } from "@/components/PushToggle";
 import { getConfig } from "@/lib/scheduleData";
 import { getAdminPhone, getBusinessAddress, getBusinessName } from "@/lib/settingsData";
+import { getVapidPublicKey } from "@/lib/webPush";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,27 @@ export default async function SettingsPage() {
 
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6">
           <SettingsForm current={{ ...config, address, adminPhone, businessName }} />
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-6">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">
+            Notifications on this device
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+            Booking alerts as phone notifications, in addition to Telegram.
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6">
+          {/*
+            The key has to come from the server: PushToggle is a client
+            component and can't read env vars, and a NEXT_PUBLIC_* one would be
+            baked in at build time — the same reasoning as `isSmsConfigured()`
+            being passed into the booking form.
+          */}
+          <PushToggle vapidPublicKey={getVapidPublicKey()} />
         </div>
       </div>
 

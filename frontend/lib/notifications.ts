@@ -2,17 +2,19 @@
  * Who gets told what, over which channel.
  *
  * Sits between the copy (`bookingSms.ts` and `adminAlerts.ts`, both pure) and
- * the transports (`sms.ts`, `telegram.ts` — the only outbound calls) because it
- * needs the database: the admin's number, the business name and the opt-out
- * list all live there. Keeping that dependency here is what lets the transports
- * and their tests stay clear of Prisma.
+ * the transports (`sms.ts`, `telegram.ts`, `webPush.ts` — the only outbound
+ * calls) because it needs the database: the admin's number, the business name
+ * and the opt-out list all live there. Keeping that dependency here is what lets
+ * `sms.ts` and `telegram.ts` stay clear of Prisma; `webPush.ts` is the one
+ * transport that cannot, since a browser subscription can only be stored.
  *
  * **The admin and the client are on different channels, for different reasons.**
  * The admin is one known person who can install anything, so alerts go to
- * Telegram — free, instant, and needing no carrier registration. Clients only
- * gave a phone number, so they can only be reached by SMS, which stays dormant
- * until A2P 10DLC registration is done. Setting the Twilio env vars is all it
- * takes to switch that on.
+ * Telegram — free, instant, and needing no carrier registration — and, on top
+ * of that, as a push notification to the home-screen app on their phone.
+ * Clients only gave a phone number, so they can only be reached by SMS, which
+ * stays dormant until A2P 10DLC registration is done. Setting the Twilio env
+ * vars is all it takes to switch that on.
  *
  * **Nothing in this module throws.** A booking or a cancellation that has
  * already committed is real whether or not an alert went out, so every path is
@@ -20,7 +22,14 @@
  * retry queue, not an exception the caller has to handle.
  */
 
-import { clientCancelledAlert, newBookingAlert, type AlertableBooking } from "./adminAlerts";
+import {
+  clientCancelledAlert,
+  clientCancelledPush,
+  newBookingAlert,
+  newBookingPush,
+  type AlertableBooking,
+  type PushAlert,
+} from "./adminAlerts";
 import {
   adminClientCancelled,
   adminNewBooking,
@@ -32,6 +41,7 @@ import { db } from "./db";
 import { getAdminPhone, getBusinessAddress, getBusinessName } from "./settingsData";
 import { sendSms } from "./sms";
 import { isTelegramConfigured, sendTelegram } from "./telegram";
+import { sendPushToAll } from "./webPush";
 
 /**
  * `sendSms` and `sendTelegram` already swallow their own failures, but these
@@ -66,14 +76,14 @@ async function sendUnlessOptedOut(to: string, body: string): Promise<void> {
 }
 
 /**
- * Alerts the admin over exactly one channel.
+ * Alerts the admin by text, over exactly one channel.
  *
  * Telegram wins when configured; admin SMS is the fallback for once 10DLC
- * registration is done. Never both — one alert per event, whatever is set up.
- * Both admin-facing events route through here so they can't drift apart on
- * which channel they use.
+ * registration is done. Never both — one *text* per event, whatever is set up,
+ * because these two carry the same words to the same person and a duplicate is
+ * pure annoyance. Push is not in that pair; see `alertAdmin` below.
  */
-async function alertAdmin({
+async function alertAdminText({
   telegramText,
   smsText,
 }: {
@@ -88,6 +98,38 @@ async function alertAdmin({
   // An unset admin number means these alerts are simply off.
   const adminPhone = await getAdminPhone();
   if (adminPhone) await sendUnlessOptedOut(adminPhone, smsText);
+}
+
+/**
+ * Alerts the admin: one text, plus a push to their home-screen app.
+ *
+ * **Push is additive, deliberately.** Every other pairing in this module is
+ * exclusive, so this needs justifying: Apple's Web Push implementation fails
+ * quietly in ways the text channels do not. Deleting the home-screen icon,
+ * restoring the phone, or an expired subscription all stop pushes with nothing
+ * anywhere to say so — the admin would simply find the booking on the dashboard
+ * and never know an alert was owed. So the text channel keeps firing on every
+ * event regardless, and push is the faster, better-looking second copy of a
+ * message that arrived either way.
+ *
+ * The two are independent: `sendPushToAll` and `alertAdminText` each swallow
+ * their own failures, and one being unconfigured must not stop the other.
+ * Both admin-facing events route through here so they can't drift apart on
+ * which channels they use.
+ */
+async function alertAdmin({
+  telegramText,
+  smsText,
+  push,
+}: {
+  telegramText: string;
+  smsText: string;
+  push: PushAlert;
+}): Promise<void> {
+  await Promise.all([
+    sendPushToAll(push),
+    alertAdminText({ telegramText, smsText }),
+  ]);
 }
 
 /**
@@ -116,6 +158,7 @@ export async function notifyBookingCreated(
       alertAdmin({
         telegramText: newBookingAlert(booking, { businessName }),
         smsText: adminNewBooking(booking, { businessName }),
+        push: newBookingPush(booking),
       }),
     ]);
   });
@@ -134,6 +177,7 @@ export async function notifyBookingCancelled(
       await alertAdmin({
         telegramText: clientCancelledAlert(booking, { businessName }),
         smsText: adminClientCancelled(booking, { businessName }),
+        push: clientCancelledPush(booking),
       });
       return;
     }

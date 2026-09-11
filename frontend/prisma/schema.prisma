@@ -52,12 +52,12 @@ model Booking {
 }
 
 model Settings {
-  id                 Int @id @default(1)
+  id                 Int    @id @default(1)
   /// Granularity of offered start times (e.g. 15 => 4:00, 4:15, 4:30 …).
   /// How long an appointment lasts is NOT here — it belongs to each Service.
-  slotIntervalMin    Int @default(15)
+  slotIntervalMin    Int    @default(15)
   /// How many days ahead clients may book.
-  bookingHorizonDays Int @default(30)
+  bookingHorizonDays Int    @default(30)
   /// Where appointments happen. Free text (may be multi-line) so the admin can
   /// write it the way clients would search for it. Empty means "not set", in
   /// which case calendar events simply carry no location.
@@ -134,4 +134,34 @@ model Service {
   createdAt       DateTime @default(now())
 
   bookings Booking[]
+}
+
+/// One browser that has agreed to receive push notifications.
+///
+/// **Admin-only, and single-tenant** — there is no owner column because there
+/// is exactly one admin, and the subscribe endpoints sit behind their session.
+/// Do not read this as a general "subscriptions" table: sending to clients
+/// would need an owner and a consent timestamp, the way `Booking.smsConsentAt`
+/// records consent per appointment.
+///
+/// One row per browser, not per person: the admin's phone and their laptop are
+/// two subscriptions, and reinstalling the home-screen app produces a third.
+/// The stale ones are not cleaned up by hand — `lib/webPush.ts` deletes any
+/// endpoint the push service reports as gone.
+model PushSubscription {
+  id            Int       @id @default(autoincrement())
+  /// The push service URL this browser was handed (web.push.apple.com for iOS,
+  /// fcm.googleapis.com for Chrome). Unique because it *is* the identity — a
+  /// re-subscribe returns the same endpoint and must update, not duplicate.
+  endpoint      String    @unique
+  /// The subscription's public key and auth secret, used to encrypt the
+  /// payload. Opaque base64url to us; `web-push` does the crypto.
+  p256dh        String
+  auth          String
+  /// Whatever browser registered it, purely so a list of subscriptions is
+  /// recognizable ("iPhone" vs "Mac") when deciding whether to remove one.
+  userAgent     String    @default("")
+  createdAt     DateTime  @default(now())
+  /// Last time a push to this endpoint was accepted. Null until the first send.
+  lastSuccessAt DateTime?
 }

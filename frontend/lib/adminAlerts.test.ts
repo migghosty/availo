@@ -13,7 +13,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   clientCancelledAlert,
+  clientCancelledPush,
   newBookingAlert,
+  newBookingPush,
   type AlertableBooking,
 } from "./adminAlerts";
 
@@ -113,6 +115,65 @@ describe("plain text only", () => {
     for (const alert of [newBookingAlert(BOOKING, CTX), clientCancelledAlert(BOOKING, CTX)]) {
       expect(alert).not.toMatch(/[*_`[\]]/);
       expect(alert).not.toMatch(/<\/?[a-z]+>/i);
+    }
+  });
+});
+
+/**
+ * Push copy has a different shape and a different constraint from the text
+ * alerts above: structured fields rather than one string, and a title iOS
+ * truncates on the lock screen — so what must survive is the part worth seeing
+ * at a glance.
+ */
+describe("push alerts", () => {
+  it("leads with the event and the client, since the title is what survives truncation", () => {
+    expect(newBookingPush(BOOKING).title).toBe("New booking · Ada Lovelace");
+    expect(clientCancelledPush(BOOKING).title).toBe("Cancelled · Ada Lovelace");
+  });
+
+  it("keeps the title short enough to read on a lock screen", () => {
+    for (const alert of [newBookingPush(BOOKING), clientCancelledPush(BOOKING)]) {
+      expect(alert.title.length).toBeLessThanOrEqual(40);
+    }
+  });
+
+  it("puts the detail in the body", () => {
+    const alert = newBookingPush(BOOKING);
+
+    expect(alert.body).toContain("Haircut");
+    expect(alert.body).toContain("45 min");
+    expect(alert.body).toContain("$25");
+    expect(alert.body).toContain("Wed, Aug 12 at 5:00 PM");
+    expect(alert.body).toContain("(619) 123-4567");
+  });
+
+  it("says the time reopened when a client cancels", () => {
+    expect(clientCancelledPush(BOOKING).body).toContain("That time is open again.");
+  });
+
+  it("taps through to the dashboard", () => {
+    expect(newBookingPush(BOOKING).url).toBe("/admin/dashboard");
+    expect(clientCancelledPush(BOOKING).url).toBe("/admin/dashboard");
+  });
+
+  it("tags per appointment, so a repeat send replaces rather than stacks", () => {
+    const other = { ...BOOKING, startTime: new Date("2026-08-14T00:00:00.000Z") };
+
+    expect(newBookingPush(BOOKING).tag).toBe(newBookingPush(BOOKING).tag);
+    expect(newBookingPush(BOOKING).tag).not.toBe(newBookingPush(other).tag);
+  });
+
+  it("keeps booking and cancellation tags distinct", () => {
+    // Being told a slot was booked *and* then cancelled is information; a
+    // shared tag would let the second silently overwrite the first.
+    expect(newBookingPush(BOOKING).tag).not.toBe(clientCancelledPush(BOOKING).tag);
+  });
+
+  it("does not repeat the business name", () => {
+    // The notification already arrives labelled with the app that sent it, and
+    // the title has no room to spare.
+    for (const alert of [newBookingPush(BOOKING), clientCancelledPush(BOOKING)]) {
+      expect(`${alert.title} ${alert.body}`).not.toContain("Ada's Barbershop");
     }
   });
 });

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Android's maskable icon: same mark, but scaled into the 80% safe zone so an
+  aggressive system mask (circle, squircle, teardrop) can't clip the glyph.
+  Kept as its own file rather than derived by script so what ships is what you
+  can look at.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1e293b"/>
+  <g transform="translate(256 256) scale(0.66) translate(-256 -256)" fill="none" stroke="#ffffff" stroke-width="52" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M154 396 L256 132 L358 396"/>
+    <path d="M195 306 H317"/>
+  </g>
+</svg>
