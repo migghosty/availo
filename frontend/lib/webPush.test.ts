@@ -20,10 +20,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const sendNotification = vi.fn();
 
 vi.mock("web-push", () => {
+  // Same constructor as the real class (and as `@types/web-push` declares it),
+  // so the test's calls typecheck against the real signature — Vitest doesn't
+  // typecheck, but CI's `tsc --noEmit` does.
   class WebPushError extends Error {
     constructor(
       message: string,
-      readonly statusCode: number
+      readonly statusCode: number,
+      readonly headers: Record<string, string>,
+      readonly body: string,
+      readonly endpoint: string
     ) {
       super(message);
     }
@@ -70,6 +76,17 @@ const SUBSCRIPTION = {
 };
 
 const PAYLOAD = { title: "New booking", body: "Ada Lovelace" };
+
+/** What `web-push` rejects with when the push service answers `statusCode`. */
+function pushServiceError(statusCode: number) {
+  return new WebPushError(
+    "Received unexpected response code",
+    statusCode,
+    {},
+    "",
+    SUBSCRIPTION.endpoint
+  );
+}
 
 function configure(values: Record<string, string | undefined>) {
   for (const [key, value] of Object.entries(values)) {
@@ -167,7 +184,7 @@ describe("when configured", () => {
   });
 
   it("never throws when the push service rejects the send", async () => {
-    sendNotification.mockRejectedValue(new WebPushError("bad request", 400));
+    sendNotification.mockRejectedValue(pushServiceError(400));
 
     expect(await sendPushToAll(PAYLOAD)).toEqual({ sent: 0, failed: 1, pruned: 0 });
   });
@@ -176,7 +193,7 @@ describe("when configured", () => {
     it(`prunes a subscription the push service reports gone (${statusCode})`, async () => {
       // The home-screen app was deleted or the phone restored. Nothing else
       // will ever tell us, so this is the only cleanup there is.
-      sendNotification.mockRejectedValue(new WebPushError("gone", statusCode));
+      sendNotification.mockRejectedValue(pushServiceError(statusCode));
 
       expect(await sendPushToAll(PAYLOAD)).toEqual({ sent: 0, failed: 0, pruned: 1 });
       expect(deleteOne).toHaveBeenCalledWith({ where: { id: 1 } });
@@ -186,7 +203,7 @@ describe("when configured", () => {
   for (const statusCode of [429, 500, 503]) {
     it(`keeps the subscription after a transient failure (${statusCode})`, async () => {
       // Pruning here would silently end notifications for good.
-      sendNotification.mockRejectedValue(new WebPushError("later", statusCode));
+      sendNotification.mockRejectedValue(pushServiceError(statusCode));
 
       expect(await sendPushToAll(PAYLOAD)).toEqual({ sent: 0, failed: 1, pruned: 0 });
       expect(deleteOne).not.toHaveBeenCalled();
