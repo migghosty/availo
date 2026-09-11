@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getBusinessName } from "@/lib/settingsData";
 
 /**
  * Exists only to declare the admin app's metadata — it renders its children
@@ -17,23 +18,30 @@ import type { Metadata } from "next";
  *
  * The public pages deliberately have no manifest. Clients visit the site once
  * to book; nothing should invite them to install it.
+ *
+ * The app is named after `Settings.businessName`. The manifest at
+ * `/admin.webmanifest` is the authoritative source iOS reads; the title here
+ * says the same thing so that whichever one Safari prefers, it gets the same
+ * answer — and so admin pages don't inherit the root layout's "Availo" title.
  */
-export const metadata: Metadata = {
-  title: "Availo Admin",
-  manifest: "/admin.webmanifest",
-  /**
-   * iOS shows the *installed app's* icon on every notification and ignores any
-   * icon in the push payload, so this link is functional, not decorative.
-   * Whichever admin page the user happens to be on when they tap "Add to Home
-   * Screen" is the one iOS reads it from — hence declaring it here, above both.
-   */
-  icons: { apple: "/icons/icon-180.png" },
-  appleWebApp: {
-    capable: true,
-    title: "Availo Admin",
-    statusBarStyle: "black-translucent",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const businessName = await getBusinessName();
+
+  return {
+    title: businessName,
+    manifest: "/admin.webmanifest",
+    /**
+     * iOS shows the *installed app's* icon on every notification and ignores
+     * any icon in the push payload, so this link is functional, not decorative.
+     */
+    icons: { apple: "/icons/icon-180.png" },
+    appleWebApp: {
+      capable: true,
+      title: businessName,
+      statusBarStyle: "black-translucent",
+    },
+  };
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return children;

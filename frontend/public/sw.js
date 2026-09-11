@@ -1,5 +1,5 @@
 /**
- * Availo's service worker: a notification receiver, and nothing else.
+ * The service worker: a notification receiver, and nothing else.
  *
  * Deliberately not a PWA shell — there is no caching, no offline page, no
  * precache manifest. The admin app is useless offline (every page is a live
@@ -34,7 +34,10 @@ self.addEventListener("push", (event) => {
     console.error("[sw] unparseable push payload", error);
   }
 
-  const title = payload.title || "Availo";
+  // Every payload the server sends has a title, so this is only for a malformed
+  // one. Deliberately not a business name: this file is served as-is and can't
+  // read Settings, and iOS already labels the notification with the app's name.
+  const title = payload.title || "Booking update";
 
   event.waitUntil(
     self.registration.showNotification(title, {

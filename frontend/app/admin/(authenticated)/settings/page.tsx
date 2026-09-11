@@ -47,7 +47,7 @@ export default async function SettingsPage() {
             baked in at build time — the same reasoning as `isSmsConfigured()`
             being passed into the booking form.
           */}
-          <PushToggle vapidPublicKey={getVapidPublicKey()} />
+          <PushToggle vapidPublicKey={getVapidPublicKey()} appName={businessName} />
         </div>
       </div>
 
