@@ -17,13 +17,23 @@
  * the build log, so a Preview deployment wired to the production database is
  * visible at a glance instead of being discovered afterwards.
  *
+ * It also flags a pooled host. `prisma migrate deploy` needs a direct connection
+ * — see the note in `prisma.config.ts` — and migrating through PgBouncer fails
+ * only *sometimes*, with a P1002 timeout that names an advisory lock rather than
+ * the pooler. A warning here puts the cause directly above the error in the same
+ * build log. It is not fatal: a pooled migrate often succeeds, and failing the
+ * build on a hostname substring would block deploys that would have worked.
+ *
  * Never prints the password — only the hostname.
  */
 
 // Matches prisma.config.ts. `dotenv/config` reads `.env` only, never `.env.local`.
 import "dotenv/config";
 
-const databaseUrl = process.env.DATABASE_URL;
+// The same resolution prisma.config.ts uses, so this reports the connection
+// migrations will actually open rather than the one the app runs on.
+const databaseUrl = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+const usingDirectUrl = Boolean(process.env.DIRECT_URL);
 
 // VERCEL_ENV is "production" | "preview" | "development" on Vercel, unset locally.
 const environment = process.env.VERCEL_ENV ?? "local";
@@ -44,6 +54,9 @@ if (!databaseUrl) {
   console.error("");
   console.error("      vercel env add DATABASE_URL preview");
   console.error("");
+  console.error("    Migrations prefer DIRECT_URL when set — the same string with");
+  console.error("    \"-pooler\" removed from the host. See prisma.config.ts.");
+  console.error("");
   console.error("    The \"Sensitive\" flag is not the problem — sensitive variables are");
   console.error("    still injected into the build. Do not un-mark it.");
   console.error("");
@@ -63,4 +76,30 @@ try {
   process.exit(1);
 }
 
-console.log(`  ✔ Migrating ${environment} database at ${host}`);
+console.log(
+  `  ✔ Migrating ${environment} database at ${host}` +
+    (usingDirectUrl ? " (via DIRECT_URL)" : "")
+);
+
+// A pooled host is the one configuration that makes `migrate deploy` fail
+// intermittently rather than never — see prisma.config.ts for why.
+if (host.includes("-pooler")) {
+  console.warn("");
+  console.warn("  ⚠ That host is a connection pooler, and migrations need a direct one.");
+  console.warn("");
+  console.warn("    prisma migrate deploy takes a session-scoped advisory lock. Through");
+  console.warn("    PgBouncer's transaction pooling that lock can be stranded on a backend");
+  console.warn("    the migration no longer holds, and the next deploy fails with:");
+  console.warn("");
+  console.warn("      P1002 — Timed out trying to acquire a postgres advisory lock");
+  console.warn("");
+  console.warn("    It usually succeeds anyway, so this is a latent failure, not a certain");
+  console.warn("    one. Fix it by setting DIRECT_URL to the same connection string with");
+  console.warn("    \"-pooler\" removed from the host:");
+  console.warn("");
+  console.warn(`      vercel env add DIRECT_URL ${environment}`);
+  console.warn("");
+  console.warn("    The runtime keeps using the pooled DATABASE_URL — only the CLI reads");
+  console.warn("    DIRECT_URL, so serverless connection pooling is unaffected.");
+  console.warn("");
+}
