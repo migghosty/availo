@@ -22,7 +22,11 @@
  * corrupt a message, and adding formatting characters here would undo that.
  */
 
-import { formatSmsTime } from "./bookingSms";
+import {
+  formatSmsClock,
+  formatSmsTime,
+  formatSmsTimeRange,
+} from "./bookingSms";
 import { formatPhone } from "./phone";
 import { formatDuration, formatPrice } from "./service";
 
@@ -168,5 +172,111 @@ export function clientCancelledPush(booking: AlertableBooking): PushAlert {
     ].join("\n"),
     url: DASHBOARD_URL,
     tag: bookingTag("cancelled", booking.startTime),
+  };
+}
+
+/* ------------------------------------------------------------------------- *
+ * Group bookings
+ *
+ * Telegram and push have room the client's SMS does not, so these do list
+ * every person with their own time — that is precisely the detail the admin
+ * needs to work the block. One alert per group, never one per person.
+ * ------------------------------------------------------------------------- */
+
+/** A whole block: the legs, plus the totals a channel with room can afford. */
+export type AlertableGroup = {
+  startTime: Date;
+  endTime: Date;
+  clientName: string;
+  clientPhone: string;
+  /** One per person, in the order they will be seen. */
+  legs: AlertableBooking[];
+  totalDurationMinutes: number;
+  totalPriceCents: number;
+};
+
+/** `5:00 PM · Haircut · 30 min · $25` — one person's line within the block. */
+function legLine(leg: AlertableBooking): string {
+  return `${formatSmsClock(leg.startTime)} · ${serviceLine(leg)}`;
+}
+
+/** The block's own summary line: when it runs, how long, what it's worth. */
+function groupTotalsLine(group: AlertableGroup): string {
+  const parts = [
+    formatSmsTimeRange(group.startTime, group.endTime),
+    formatDuration(group.totalDurationMinutes),
+  ];
+
+  if (group.totalPriceCents > 0) {
+    parts.push(formatPrice(group.totalPriceCents));
+  }
+
+  return parts.join(" · ");
+}
+
+/** A group booked a block. */
+export function newGroupBookingAlert(
+  group: AlertableGroup,
+  { businessName }: { businessName: string }
+): string {
+  return [
+    `🆕 New group booking (${group.legs.length}) — ${businessName}`,
+    "",
+    group.clientName,
+    formatPhone(group.clientPhone),
+    "",
+    ...group.legs.map(legLine),
+    "",
+    groupTotalsLine(group),
+  ].join("\n");
+}
+
+/** The group cancelled; the whole block is free again. */
+export function groupCancelledAlert(
+  group: AlertableGroup,
+  { businessName }: { businessName: string }
+): string {
+  return [
+    `❌ Group cancelled (${group.legs.length}) — ${businessName}`,
+    "",
+    group.clientName,
+    formatPhone(group.clientPhone),
+    "",
+    ...group.legs.map(legLine),
+    "",
+    groupTotalsLine(group),
+    "",
+    "That whole block is open again.",
+  ].join("\n");
+}
+
+/**
+ * Push for a new group. The tag reuses the first leg's `startTime`, which is
+ * still `@unique`, so a group produces one notification rather than a stack.
+ */
+export function newGroupBookingPush(group: AlertableGroup): PushAlert {
+  return {
+    title: `New group booking (${group.legs.length})`,
+    body: [
+      group.clientName,
+      groupTotalsLine(group),
+      formatPhone(group.clientPhone),
+    ].join("\n"),
+    url: DASHBOARD_URL,
+    tag: bookingTag("new", group.startTime),
+  };
+}
+
+/** Push for a cancelled group. */
+export function groupCancelledPush(group: AlertableGroup): PushAlert {
+  return {
+    title: `Group cancelled (${group.legs.length})`,
+    body: [
+      group.clientName,
+      groupTotalsLine(group),
+      "That whole block is open again.",
+    ].join("\n"),
+    url: DASHBOARD_URL,
+    tag: bookingTag("cancelled", group.startTime),
   };
 }

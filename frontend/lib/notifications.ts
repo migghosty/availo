@@ -25,17 +25,27 @@
 import {
   clientCancelledAlert,
   clientCancelledPush,
+  groupCancelledAlert,
+  groupCancelledPush,
   newBookingAlert,
   newBookingPush,
+  newGroupBookingAlert,
+  newGroupBookingPush,
   type AlertableBooking,
+  type AlertableGroup,
   type PushAlert,
 } from "./adminAlerts";
 import {
   adminClientCancelled,
+  adminGroupCancelled,
   adminNewBooking,
+  adminNewGroupBooking,
   clientAdminCancelled,
+  clientAdminGroupCancelled,
   clientBookingConfirmed,
+  clientGroupBookingConfirmed,
   type NotifiableBooking,
+  type NotifiableGroup,
 } from "./bookingSms";
 import { db } from "./db";
 import { getAdminPhone, getBusinessAddress, getBusinessName } from "./settingsData";
@@ -185,6 +195,121 @@ export async function notifyBookingCancelled(
     await sendUnlessOptedOut(
       booking.clientPhone,
       clientAdminCancelled(booking, { businessName, origin })
+    );
+  });
+}
+
+/* ------------------------------------------------------------------------- *
+ * Group bookings
+ *
+ * A block of 2-4 back-to-back appointments produces **one** client text and
+ * **one** admin alert, not one per person. Channel policy is unchanged: these
+ * route through the same `alertAdmin`, so Telegram still wins over admin SMS
+ * and push is still additive.
+ * ------------------------------------------------------------------------- */
+
+/** One booked appointment within a block, as the composers want it. */
+export type BookedLeg = AlertableBooking & NotifiableBooking;
+
+/**
+ * Folds the legs into the two shapes the copy modules take.
+ *
+ * The end is the last leg's end rather than the sum, so a block whose rows are
+ * somehow not contiguous still reports the span a client would actually wait
+ * through. Contact details come off the first leg — a group has one booker.
+ */
+function summarize(legs: BookedLeg[]): {
+  group: NotifiableGroup;
+  alert: AlertableGroup;
+} {
+  const ordered = [...legs].sort(
+    (a, b) => a.startTime.getTime() - b.startTime.getTime()
+  );
+  const first = ordered[0];
+  const last = ordered[ordered.length - 1];
+  const endTime = new Date(
+    last.startTime.getTime() + last.durationMinutes * 60_000
+  );
+
+  return {
+    group: {
+      startTime: first.startTime,
+      endTime,
+      size: ordered.length,
+      serviceNames: ordered.map((leg) => leg.serviceName),
+      clientName: first.clientName,
+      clientPhone: first.clientPhone,
+      cancelToken: first.cancelToken,
+    },
+    alert: {
+      startTime: first.startTime,
+      endTime,
+      clientName: first.clientName,
+      clientPhone: first.clientPhone,
+      legs: ordered,
+      totalDurationMinutes: Math.round(
+        (endTime.getTime() - first.startTime.getTime()) / 60_000
+      ),
+      totalPriceCents: ordered.reduce(
+        (sum, leg) => sum + leg.servicePriceCents,
+        0
+      ),
+    },
+  };
+}
+
+/** Confirmation to the group's contact, alert to the admin. */
+export async function notifyGroupBookingCreated(
+  legs: BookedLeg[],
+  { origin }: { origin?: string } = {}
+): Promise<void> {
+  if (legs.length === 0) return;
+
+  await neverThrows("group-booking-created notification", async () => {
+    const [address, businessName] = await Promise.all([
+      getBusinessAddress(),
+      getBusinessName(),
+    ]);
+    const { group, alert } = summarize(legs);
+
+    await Promise.all([
+      sendUnlessOptedOut(
+        group.clientPhone,
+        clientGroupBookingConfirmed(group, { businessName, origin, address })
+      ),
+      alertAdmin({
+        telegramText: newGroupBookingAlert(alert, { businessName }),
+        smsText: adminNewGroupBooking(group, { businessName }),
+        push: newGroupBookingPush(alert),
+      }),
+    ]);
+  });
+}
+
+/** Tells whichever party did *not* cancel. One message for the whole block. */
+export async function notifyGroupBookingCancelled(
+  legs: BookedLeg[],
+  cancelledBy: "client" | "admin",
+  { origin }: { origin?: string } = {}
+): Promise<void> {
+  if (legs.length === 0) return;
+
+  await neverThrows("group-cancellation notification", async () => {
+    const businessName = await getBusinessName();
+    const { group, alert } = summarize(legs);
+
+    if (cancelledBy === "client") {
+      await alertAdmin({
+        telegramText: groupCancelledAlert(alert, { businessName }),
+        smsText: adminGroupCancelled(group, { businessName }),
+        push: groupCancelledPush(alert),
+      });
+      return;
+    }
+
+    await sendUnlessOptedOut(
+      group.clientPhone,
+      clientAdminGroupCancelled(group, { businessName, origin })
     );
   });
 }

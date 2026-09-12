@@ -3,7 +3,18 @@
 import { useActionState } from "react";
 import { cancelBookingAction } from "./actions";
 
-export function CancelForm({ cancelToken }: { cancelToken: string }) {
+export function CancelForm({
+  cancelToken,
+  count = 1,
+}: {
+  cancelToken: string;
+  /**
+   * How many appointments this removes. A group cancels whole, so the button
+   * has to say so rather than letting somebody tap "cancel my appointment" and
+   * lose three.
+   */
+  count?: number;
+}) {
   const boundAction = cancelBookingAction.bind(null, cancelToken);
   const [error, formAction, isPending] = useActionState(boundAction, null);
 
@@ -19,7 +30,11 @@ export function CancelForm({ cancelToken }: { cancelToken: string }) {
         disabled={isPending}
         className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
       >
-        {isPending ? "Cancelling…" : "Yes, cancel my appointment"}
+        {isPending
+          ? "Cancelling…"
+          : count > 1
+            ? `Yes, cancel all ${count} appointments`
+            : "Yes, cancel my appointment"}
       </button>
     </form>
   );

@@ -80,3 +80,72 @@ export function toCalendarEvent(
     reminderMinutesBefore: REMINDER_MINUTES_BEFORE,
   };
 }
+
+/* ------------------------------------------------------------------------- *
+ * Group bookings
+ * ------------------------------------------------------------------------- */
+
+/**
+ * A block of back-to-back appointments as **one** calendar event.
+ *
+ * Not N events, for three structural reasons and one human one:
+ *
+ *  - `googleCalendarUrl` can only express a single event, so N in the .ics
+ *    would make the two "Add to calendar" buttons produce different results —
+ *    exactly the drift this module exists to prevent.
+ *  - `buildIcs` takes one event, and it is a module whose output has to be
+ *    exactly right for Apple Calendar, which rejects malformed files silently.
+ *  - `uid` stays the primary `cancelToken`, so re-adding still updates rather
+ *    than duplicating. N events would need N synthesized uids.
+ *  - The client is at the shop for one continuous visit. Four adjacent blocks
+ *    on a phone screen is calendar spam.
+ */
+export function toGroupCalendarEvent(
+  legs: BookableEvent[],
+  {
+    origin,
+    address = "",
+    businessName,
+  }: { origin: string; address?: string; businessName: string }
+): CalendarEvent {
+  const ordered = [...legs].sort(
+    (a, b) => a.startTime.getTime() - b.startTime.getTime()
+  );
+  const first = ordered[0];
+  const last = ordered[ordered.length - 1];
+  const totalMinutes = Math.round(
+    (last.startTime.getTime() +
+      last.durationMinutes * 60_000 -
+      first.startTime.getTime()) /
+      60_000
+  );
+
+  const schedule = ordered
+    .map(
+      (leg, index) =>
+        `${index + 1}. ${formatBusinessTime(leg.startTime)} · ` +
+        `${leg.serviceName.trim() || "Appointment"} · ${leg.durationMinutes} min`
+    )
+    .join("\n");
+
+  const description = [
+    `Booked for ${first.clientName}, ${ordered.length} people.`,
+    schedule,
+    `Need to cancel? ${origin}/cancel/${first.cancelToken}\nThis cancels all ${ordered.length} appointments.`,
+  ].join("\n\n");
+
+  return {
+    uid: `${first.cancelToken}@availo`,
+    start: first.startTime,
+    durationMinutes: totalMinutes,
+    // The earliest leg's, so the file stays byte-identical between fetches.
+    stamp: ordered.reduce(
+      (earliest, leg) => (leg.createdAt < earliest ? leg.createdAt : earliest),
+      first.createdAt
+    ),
+    title: `${ordered.length} appointments at ${businessName}`,
+    description,
+    location: address || undefined,
+    reminderMinutesBefore: REMINDER_MINUTES_BEFORE,
+  };
+}

@@ -1,4 +1,8 @@
-import { toCalendarEvent, type BookableEvent } from "@/lib/bookingEvent";
+import {
+  toCalendarEvent,
+  toGroupCalendarEvent,
+  type BookableEvent,
+} from "@/lib/bookingEvent";
 import { googleCalendarUrl } from "@/lib/calendar";
 import { getBusinessAddress, getBusinessName } from "@/lib/settingsData";
 import { getOrigin } from "@/lib/siteUrl";
@@ -16,14 +20,21 @@ import { getOrigin } from "@/lib/siteUrl";
  * - It has no `target="_blank"`. Safari shows its "Add All to Calendar" sheet in
  *   place; a new tab just strands the user on a blank page. The Google link does
  *   open a new tab, because it genuinely leaves the site.
+ *
+ * Takes a list because a group booking is several rows: it becomes one event
+ * spanning the whole block, not one per person. See `toGroupCalendarEvent`.
  */
-export async function AddToCalendar({ booking }: { booking: BookableEvent }) {
+export async function AddToCalendar({ bookings }: { bookings: BookableEvent[] }) {
   const [origin, address, businessName] = await Promise.all([
     getOrigin(),
     getBusinessAddress(),
     getBusinessName(),
   ]);
-  const event = toCalendarEvent(booking, { origin, address, businessName });
+  const context = { origin, address, businessName };
+  const event =
+    bookings.length === 1
+      ? toCalendarEvent(bookings[0], context)
+      : toGroupCalendarEvent(bookings, context);
 
   return (
     <div>
@@ -35,7 +46,7 @@ export async function AddToCalendar({ booking }: { booking: BookableEvent }) {
         {/* The transparent border is load-bearing: without it this button is 2px
             shorter than the outlined one sitting directly below it on a phone. */}
         <a
-          href={`/api/bookings/calendar/${booking.cancelToken}`}
+          href={`/api/bookings/calendar/${bookings[0].cancelToken}`}
           aria-label="Add to Apple Calendar or Outlook (downloads a calendar file)"
           className="flex-1 text-center bg-amber-500 hover:bg-amber-600 border border-transparent text-white font-medium px-4 py-3 rounded-lg text-sm transition-colors"
         >

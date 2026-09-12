@@ -425,3 +425,139 @@ describe("daylight saving time", () => {
     );
   });
 });
+
+describe("group blocks", () => {
+  /**
+   * A party of N seen back to back is one appointment of the summed length —
+   * `lib/availability.ts` needs no notion of groups at all. These pin the
+   * behaviour the group flow depends on, because it is the only thing standing
+   * between "3 people at 6:00" and a block that swallows somebody else's 7:00.
+   */
+  const at7pm: BookingLike[] = [
+    { startTime: instantForDateMinute(MONDAY, 19 * HOUR), durationMinutes: 30 },
+  ];
+
+  /** Three 30-minute services in a row. */
+  const BLOCK = 90;
+
+  it("allows a block that ends exactly when the next booking starts", () => {
+    // 5:30 + 90min runs to 7:00, and the booking begins at 7:00. The overlap
+    // test is half-open, so touching is not overlapping.
+    const bookable = isStartBookable({
+      start: instantForDateMinute(MONDAY, 17 * HOUR + 30),
+      rules,
+      overrides: [],
+      bookings: at7pm,
+      config,
+      durationMin: BLOCK,
+      now,
+    });
+
+    expect(bookable).toBe(true);
+  });
+
+  it("is the latest start before that booking", () => {
+    const starts = availabilityForDate(
+      MONDAY,
+      rules,
+      noOverrides,
+      at7pm,
+      config,
+      BLOCK,
+      now
+    ).map(at);
+
+    // 5:45 would run to 7:15, into the booking; so would 6:00 and 6:30.
+    expect(starts).toContain("5:30 PM");
+    expect(starts).not.toContain("5:45 PM");
+    expect(starts).not.toContain("6:00 PM");
+    expect(starts).not.toContain("6:30 PM");
+  });
+
+  it("still leaves 6:00 and 6:30 open to a single 30-minute service", () => {
+    // The same day and the same booking: what a block loses, one person keeps.
+    // This is the pair that makes the group rule visible rather than a claim.
+    const starts = timesOn(MONDAY, at7pm);
+
+    expect(starts).toContain("6:00 PM");
+    expect(starts).toContain("6:30 PM");
+  });
+
+  it("stops early enough that the whole block fits before closing", () => {
+    const starts = availabilityForDate(
+      MONDAY,
+      rules,
+      noOverrides,
+      noBookings,
+      config,
+      BLOCK,
+      now
+    ).map(at);
+
+    // Closing is 10:00 PM, so 8:30 is the last block that finishes in time.
+    expect(starts).toContain("8:30 PM");
+    expect(starts).not.toContain("8:45 PM");
+  });
+
+  it("never spans a break, even when both halves are open", () => {
+    // A split shift with a two-hour gap: 4-6 PM and 8-10 PM. Neither half is
+    // 90 minutes clear of the other, and a block may not run through the gap.
+    const split: ScheduleRuleLike[] = [
+      { dayOfWeek: 1, startMinute: 16 * HOUR, endMinute: 18 * HOUR },
+      { dayOfWeek: 1, startMinute: 20 * HOUR, endMinute: 22 * HOUR },
+    ];
+
+    const starts = availabilityForDate(
+      MONDAY,
+      split,
+      noOverrides,
+      noBookings,
+      config,
+      BLOCK,
+      now
+    ).map(at);
+
+    // Each half fits blocks at 4:00/4:15/4:30 and 8:00/8:15/8:30 — and nothing
+    // in between, which is the point: 5:00 PM would run to 6:30, through a gap
+    // the shop is closed for.
+    expect(starts).toEqual([
+      "4:00 PM",
+      "4:15 PM",
+      "4:30 PM",
+      "8:00 PM",
+      "8:15 PM",
+      "8:30 PM",
+    ]);
+  });
+
+  it("offers a block only where a single service could also start", () => {
+    // A block is strictly more demanding than one appointment, so its starts
+    // are always a subset. If this ever fails, the group flow is offering times
+    // the one-person flow would refuse.
+    const forBlock = new Set(
+      computeAvailability({
+        rules,
+        overrides: [],
+        bookings: at7pm,
+        config,
+        durationMin: BLOCK,
+        now,
+      }).flatMap((day) => day.starts.map((start) => start.getTime()))
+    );
+
+    const forOne = new Set(
+      computeAvailability({
+        rules,
+        overrides: [],
+        bookings: at7pm,
+        config,
+        durationMin: 30,
+        now,
+      }).flatMap((day) => day.starts.map((start) => start.getTime()))
+    );
+
+    expect(forBlock.size).toBeGreaterThan(0);
+    expect(forBlock.size).toBeLessThan(forOne.size);
+    for (const start of forBlock) expect(forOne.has(start)).toBe(true);
+  });
+});

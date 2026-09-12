@@ -15,6 +15,12 @@ export const dynamic = "force-dynamic";
  * chrome this page had itself added. The single-line rows below are what pay
  * for the hero — with two-line rows the picker runs past one phone screen at
  * 390px wide. Budget holds to roughly six services before it scrolls.
+ *
+ * The group button is the one control here, and it sits *below* the list on
+ * purpose: the rule above is about anything that pushes service rows down, and
+ * this pushes nothing. It only extends the page, so at six services it is the
+ * first thing to fall under the fold — which is the right thing to sacrifice,
+ * since booking for one is the path almost everyone takes.
  */
 export default async function LandingPage() {
   const services = await getBookableServices();
@@ -67,6 +73,15 @@ export default async function LandingPage() {
             </Link>
           ))}
         </div>
+      )}
+
+      {services.length > 0 && (
+        <Link
+          href="/group"
+          className="block w-full mt-4 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold text-center py-3 rounded-xl transition-colors"
+        >
+          Book for multiple people
+        </Link>
       )}
     </div>
   );

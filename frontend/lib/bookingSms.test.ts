@@ -12,11 +12,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   adminClientCancelled,
+  adminGroupCancelled,
   adminNewBooking,
+  adminNewGroupBooking,
   clientAdminCancelled,
+  clientAdminGroupCancelled,
   clientBookingConfirmed,
+  clientGroupBookingConfirmed,
   formatSmsTime,
+  formatSmsTimeRange,
+  summarizeServiceNames,
   type NotifiableBooking,
+  type NotifiableGroup,
 } from "./bookingSms";
 
 const BOOKING: NotifiableBooking = {
@@ -42,11 +49,43 @@ const TWO_SEGMENTS = 153 * 2;
 /** GSM-7 basic set, near enough: printable ASCII plus newline. */
 const GSM7_SAFE = /^[\x20-\x7E\n]*$/;
 
+/**
+ * The worst group a client can produce: the largest party, four distinct
+ * admin-written service names at the length the admin UI allows, and the whole
+ * block spanning into the evening. Every budget assertion runs against this,
+ * not against a comfortable three-haircut case.
+ */
+const BIG_GROUP: NotifiableGroup = {
+  startTime: new Date("2026-08-13T00:00:00.000Z"),
+  // 5:00 PM + 3h45m.
+  endTime: new Date("2026-08-13T03:45:00.000Z"),
+  size: 4,
+  serviceNames: [
+    "Executive Cut and Hot Towel Shave",
+    "Beard Sculpt and Line Up",
+    "Full Colour and Style",
+    "Scalp Treatment Deluxe",
+  ],
+  clientName: "Ada Lovelace",
+  clientPhone: "+16191234567",
+  cancelToken: "11111111-2222-3333-4444-555555555555",
+};
+
 const ALL_MESSAGES = () => [
   clientBookingConfirmed(BOOKING, { ...CTX, origin: ORIGIN, address: ADDRESS }),
   adminNewBooking(BOOKING, CTX),
   adminClientCancelled(BOOKING, CTX),
   clientAdminCancelled(BOOKING, { ...CTX, origin: ORIGIN }),
+  // The group composers ride the same budget and character-set assertions
+  // below, so adding one here is all it takes to cover it.
+  clientGroupBookingConfirmed(BIG_GROUP, {
+    ...CTX,
+    origin: ORIGIN,
+    address: ADDRESS,
+  }),
+  adminNewGroupBooking(BIG_GROUP, CTX),
+  adminGroupCancelled(BIG_GROUP, CTX),
+  clientAdminGroupCancelled(BIG_GROUP, { ...CTX, origin: ORIGIN }),
 ];
 
 describe("formatSmsTime", () => {
@@ -246,5 +285,103 @@ describe("SMS budget", () => {
     for (const message of ALL_MESSAGES()) {
       expect(message).toMatch(GSM7_SAFE);
     }
+  });
+});
+
+describe("group messages", () => {
+  it("renders a range with a plain hyphen", () => {
+    // An en dash would read better and would flip the entire message to UCS-2,
+    // halving its budget. The character matters more than the typography.
+    const range = formatSmsTimeRange(BIG_GROUP.startTime, BIG_GROUP.endTime);
+
+    expect(range).toBe("Wed, Aug 12 at 5:00 PM-8:45 PM");
+    expect(range).not.toContain("–");
+    expect(range).not.toContain("—");
+  });
+
+  it("collapses repeated services for the admin", () => {
+    expect(summarizeServiceNames(["Haircut", "Haircut", "Eyebrows"])).toBe(
+      "2x Haircut, Eyebrows"
+    );
+    expect(summarizeServiceNames(["Haircut"])).toBe("Haircut");
+  });
+
+  it("names how many people and the block's span, to the client", () => {
+    const message = clientGroupBookingConfirmed(BIG_GROUP, {
+      ...CTX,
+      origin: ORIGIN,
+    });
+
+    expect(message).toContain("4 people");
+    expect(message).toContain("Wed, Aug 12 at 5:00 PM-8:45 PM");
+  });
+
+  it("says the one cancel link takes the whole block", () => {
+    const message = clientGroupBookingConfirmed(BIG_GROUP, {
+      ...CTX,
+      origin: ORIGIN,
+    });
+
+    // One link, not four. A client who thought it dropped only their own
+    // appointment and lost the group's would be badly served.
+    expect(message).toContain(`${ORIGIN}/cancel/${BIG_GROUP.cancelToken}`);
+    expect(message.match(/\/cancel\//g)).toHaveLength(1);
+    expect(message).toContain("cancels all 4");
+  });
+
+  it("leaves the service names out of the client's text", () => {
+    // Four admin-written names are the one unbounded input here; the client
+    // picked them a minute ago and the cancel page lists them in full.
+    const message = clientGroupBookingConfirmed(BIG_GROUP, {
+      ...CTX,
+      origin: ORIGIN,
+      address: ADDRESS,
+    });
+
+    for (const name of BIG_GROUP.serviceNames) {
+      expect(message).not.toContain(name);
+    }
+  });
+
+  it("does give the admin the service summary", () => {
+    // With Telegram unconfigured this text is the only thing telling them what
+    // work is coming.
+    const message = adminNewGroupBooking(BIG_GROUP, CTX);
+
+    expect(message).toContain("New group booking (4)");
+    expect(message).toContain("Ada Lovelace");
+    expect(message).toContain("(619) 123-4567");
+  });
+
+  it("carries the opt-out notice on the confirmation and nowhere else", () => {
+    expect(
+      clientGroupBookingConfirmed(BIG_GROUP, { ...CTX, origin: ORIGIN })
+    ).toContain("Reply STOP to opt out.");
+    expect(adminNewGroupBooking(BIG_GROUP, CTX)).not.toContain("STOP");
+    expect(adminGroupCancelled(BIG_GROUP, CTX)).not.toContain("STOP");
+  });
+
+  it("leads with the injected business name, never a hardcoded one", () => {
+    for (const message of [
+      clientGroupBookingConfirmed(BIG_GROUP, { ...CTX, origin: ORIGIN }),
+      adminNewGroupBooking(BIG_GROUP, CTX),
+      adminGroupCancelled(BIG_GROUP, CTX),
+      clientAdminGroupCancelled(BIG_GROUP, { ...CTX, origin: ORIGIN }),
+    ]) {
+      expect(message.startsWith(`${CTX.businessName}:`)).toBe(true);
+      expect(message).not.toContain("Availo");
+    }
+  });
+
+  it("fits two segments even for the worst group and a long address", () => {
+    // The assertion that costs money when it fails. A 500-character address is
+    // the admin's own doing, so this uses a long-but-realistic one.
+    const message = clientGroupBookingConfirmed(BIG_GROUP, {
+      ...CTX,
+      origin: ORIGIN,
+      address: "Suite 400, 7787 Bloomfield Road, San Diego, CA 92114",
+    });
+
+    expect(message.length).toBeLessThanOrEqual(TWO_SEGMENTS);
   });
 });

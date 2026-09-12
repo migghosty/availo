@@ -4,7 +4,19 @@ import Link from "next/link";
 import { AddToCalendar } from "@/components/AddToCalendar";
 import { getBusinessAddress } from "@/lib/settingsData";
 import { formatPhone } from "@/lib/phone";
+import { formatPrice } from "@/lib/service";
+import { toBookingGroup } from "@/lib/bookingGroup";
 import { BUSINESS_TIMEZONE } from "@/lib/timezone";
+
+/** Just the clock, for the far end of a block and its per-person rows. */
+function formatClock(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIMEZONE,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(date));
+}
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
@@ -34,7 +46,19 @@ export default async function BookingConfirmedPage({
 
   if (!booking) notFound();
 
-  const cancelUrl = `/cancel/${booking.cancelToken}`;
+  // A group booking is several rows; the token identifies one of them and the
+  // rest are its siblings. Everything below reads the group, which is a group
+  // of one for an ordinary booking.
+  const legs = booking.groupId
+    ? await db.booking.findMany({
+        where: { groupId: booking.groupId },
+        orderBy: { startTime: "asc" },
+      })
+    : [booking];
+
+  const group = toBookingGroup(legs);
+  const isGroup = group.size > 1;
+  const cancelUrl = `/cancel/${group.cancelToken}`;
 
   return (
     <div className="max-w-md">
@@ -43,21 +67,22 @@ export default async function BookingConfirmedPage({
           <span className="text-3xl">✓</span>
           <div>
             <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">You&apos;re booked!</h1>
-            <p className="text-sm text-gray-500 dark:text-slate-400">See you soon, {booking.clientName}.</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">See you soon, {group.clientName}.</p>
           </div>
         </div>
 
         <dl className="space-y-3 text-sm border-t border-gray-100 dark:border-slate-800 pt-5">
-          <div className="flex justify-between">
-            <dt className="text-gray-500 dark:text-slate-400">Date &amp; time</dt>
-            <dd className="font-medium text-slate-700 dark:text-slate-200">
-              {formatDateTime(booking.startTime)}
+          <div className="flex justify-between gap-3">
+            <dt className="text-gray-500 dark:text-slate-400 flex-none">Date &amp; time</dt>
+            <dd className="font-medium text-slate-700 dark:text-slate-200 text-right">
+              {formatDateTime(group.startTime)}
+              {isGroup && ` – ${formatClock(group.endTime)}`}
             </dd>
           </div>
           {/* Snapshotted on the booking, so a later rename doesn't rewrite
               what this client was told. Empty on bookings made before
               services were required — the row is then omitted entirely. */}
-          {booking.serviceName && (
+          {!isGroup && booking.serviceName && (
             <div className="flex justify-between">
               <dt className="text-gray-500 dark:text-slate-400">Service</dt>
               <dd className="font-medium text-slate-700 dark:text-slate-200">
@@ -65,18 +90,33 @@ export default async function BookingConfirmedPage({
               </dd>
             </div>
           )}
+          {isGroup && (
+            <div className="flex justify-between">
+              <dt className="text-gray-500 dark:text-slate-400">People</dt>
+              <dd className="font-medium text-slate-700 dark:text-slate-200">
+                {group.size}
+              </dd>
+            </div>
+          )}
           <div className="flex justify-between">
-            <dt className="text-gray-500 dark:text-slate-400">Duration</dt>
-            <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.durationMinutes} min</dd>
+            <dt className="text-gray-500 dark:text-slate-400">
+              {isGroup ? "Total" : "Duration"}
+            </dt>
+            <dd className="font-medium text-slate-700 dark:text-slate-200">
+              {group.totalDurationMinutes} min
+              {isGroup &&
+                group.totalPriceCents > 0 &&
+                ` · ${formatPrice(group.totalPriceCents)}`}
+            </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-gray-500 dark:text-slate-400">Name</dt>
-            <dd className="font-medium text-slate-700 dark:text-slate-200">{booking.clientName}</dd>
+            <dd className="font-medium text-slate-700 dark:text-slate-200">{group.clientName}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-gray-500 dark:text-slate-400">Phone</dt>
             <dd className="font-medium text-slate-700 dark:text-slate-200">
-              {formatPhone(booking.clientPhone)}
+              {formatPhone(group.clientPhone)}
             </dd>
           </div>
           {/* Stacked rather than the justify-between of the rows above: an
@@ -92,8 +132,28 @@ export default async function BookingConfirmedPage({
           )}
         </dl>
 
+        {/* Who is on at what time. The totals above are the block; this is the
+            running order the group has to know. */}
+        {isGroup && (
+          <ol className="mt-5 pt-5 border-t border-gray-100 dark:border-slate-800 space-y-2 text-sm">
+            {group.legs.map((leg) => (
+              <li key={leg.id} className="flex items-center justify-between gap-3">
+                <span className="font-medium text-slate-700 dark:text-slate-200 flex-none tabular-nums">
+                  {formatClock(leg.startTime)}
+                </span>
+                <span className="text-gray-500 dark:text-slate-400 truncate min-w-0 flex-1">
+                  {leg.serviceName || "Appointment"}
+                </span>
+                <span className="text-gray-400 dark:text-slate-500 flex-none">
+                  {leg.durationMinutes} min
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+
         <div className="mt-6 pt-5 border-t border-gray-100 dark:border-slate-800">
-          <AddToCalendar booking={booking} />
+          <AddToCalendar bookings={group.legs} />
         </div>
 
         <div className="mt-6 pt-5 border-t border-gray-100 dark:border-slate-800">
@@ -101,7 +161,9 @@ export default async function BookingConfirmedPage({
             href={cancelUrl}
             className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium transition-colors"
           >
-            Cancel appointment →
+            {isGroup
+              ? `Cancel all ${group.size} appointments →`
+              : "Cancel appointment →"}
           </Link>
         </div>
       </div>
