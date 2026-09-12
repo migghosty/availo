@@ -1,25 +1,30 @@
 "use server";
 
-import { createBooking } from "@/lib/booking";
+import { createBooking, createGroupBooking } from "@/lib/booking";
 import { getOrigin } from "@/lib/siteUrl";
 import { redirect } from "next/navigation";
 
 export async function bookSlotAction(
   startMs: number,
-  serviceId: number,
+  serviceIds: number[],
   _prevState: string | null,
   formData: FormData
 ): Promise<string | null> {
-  const result = await createBooking({
+  const input = {
     start: new Date(startMs),
-    serviceId,
     clientName: (formData.get("clientName") as string) ?? "",
     clientPhone: (formData.get("clientPhone") as string) ?? "",
-    // An unchecked box submits nothing at all; "on" is what a ticked one sends.
     smsConsent: formData.get("smsConsent") === "on",
-    // Resolved at the request edge — getOrigin() reads headers.
     origin: await getOrigin(),
-  });
+  };
+
+  // Two spellings of the same function: `createBooking` keeps the one-person
+  // signature it has always had, and both funnel into one private `bookLegs`,
+  // so neither path can enforce a rule the other doesn't.
+  const result =
+    serviceIds.length === 1
+      ? await createBooking({ ...input, serviceId: serviceIds[0] })
+      : await createGroupBooking({ ...input, serviceIds });
 
   if (!result.ok) return result.message;
 

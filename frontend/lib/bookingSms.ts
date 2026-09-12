@@ -181,3 +181,152 @@ export function clientAdminCancelled(
 
   return lines.join("\n");
 }
+
+/* ------------------------------------------------------------------------- *
+ * Group bookings
+ *
+ * A party of 2-4 books one contiguous block, and gets **one** text for the
+ * whole thing rather than one per person. The single-booking composers above
+ * are untouched: sharing an internal builder would risk perturbing strings the
+ * tests pin exactly, for no gain the reader can see.
+ * ------------------------------------------------------------------------- */
+
+/** "5:00 PM" — the clock half of `formatSmsTime`, for the end of a range. */
+export function formatSmsClock(date: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIMEZONE,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(date);
+}
+
+/**
+ * "Wed, Aug 12 at 5:00 PM-7:00 PM".
+ *
+ * Note the plain hyphen. An en dash would read better and would flip the entire
+ * message out of GSM-7, halving its budget — the exact silent failure this
+ * module's header warns about.
+ */
+export function formatSmsTimeRange(start: Date, end: Date): string {
+  return `${formatSmsTime(start)}-${formatSmsClock(end)}`;
+}
+
+/**
+ * "3x Haircut, Eyebrows" — repeats collapsed, order preserved.
+ *
+ * Only the admin sees this. It is the one unbounded input in a group message,
+ * since service names are admin-written and there can be four distinct ones.
+ */
+export function summarizeServiceNames(names: string[]): string {
+  const counts: { name: string; count: number }[] = [];
+
+  for (const raw of names) {
+    const name = serviceLabel(raw);
+    const last = counts.find((entry) => entry.name === name);
+    if (last) last.count += 1;
+    else counts.push({ name, count: 1 });
+  }
+
+  return counts
+    .map(({ name, count }) => (count > 1 ? `${count}x ${name}` : name))
+    .join(", ");
+}
+
+/** What the group composers need. The `NotifiableBooking` of a whole block. */
+export type NotifiableGroup = {
+  startTime: Date;
+  endTime: Date;
+  size: number;
+  /** One per person, in order. */
+  serviceNames: string[];
+  clientName: string;
+  clientPhone: string;
+  /** The first leg's — the only token any link uses. */
+  cancelToken: string;
+};
+
+/**
+ * Confirmation to the group's contact. Same four-line skeleton as the solo
+ * version: when, where, how to get out of it, how to stop being texted.
+ *
+ * **The service list is deliberately left out.** It is the one part of this
+ * message whose length nobody here controls: four distinct admin-written names
+ * can add ~90 characters, which is one rename away from pushing every group
+ * confirmation into a third segment. The client chose those services thirty
+ * seconds ago and the cancel link opens a page that lists them in full, so the
+ * cost of omitting them is nearly zero and the cost of including them recurs on
+ * every send. Same reasoning that makes `formatSmsTime` shorter than the
+ * calendar's format.
+ */
+export function clientGroupBookingConfirmed(
+  group: NotifiableGroup,
+  { businessName, origin, address = "" }: MessageContext
+): string {
+  const lines = [
+    `${businessName}: You're booked for ${group.size} people, ` +
+      `${formatSmsTimeRange(group.startTime, group.endTime)}.`,
+  ];
+
+  const where = oneLineAddress(address);
+  if (where) lines.push(where);
+
+  if (origin) {
+    // Says what it does: one link, and it takes the whole block. A client who
+    // thinks it cancels only their own would be badly surprised.
+    lines.push(
+      `Need to cancel? ${origin}/cancel/${group.cancelToken} cancels all ${group.size}.`
+    );
+  }
+
+  lines.push(OPT_OUT_NOTICE);
+
+  return lines.join("\n");
+}
+
+/**
+ * Heads-up to the admin. This one *does* carry the service summary: it is the
+ * work they need to plan for, and when Telegram is unconfigured this text is
+ * the only channel that tells them anything.
+ */
+export function adminNewGroupBooking(
+  group: NotifiableGroup,
+  { businessName }: MessageContext
+): string {
+  return (
+    `${businessName}: New group booking (${group.size}). ${group.clientName}, ` +
+    `${formatSmsTimeRange(group.startTime, group.endTime)}. ` +
+    `${summarizeServiceNames(group.serviceNames)}. ` +
+    `${formatPhone(group.clientPhone)}`
+  );
+}
+
+/** The client cancelled the whole block; tell the admin the time is free. */
+export function adminGroupCancelled(
+  group: NotifiableGroup,
+  { businessName }: MessageContext
+): string {
+  return (
+    `${businessName}: ${group.clientName} cancelled ${group.size} appointments, ` +
+    `${formatSmsTimeRange(group.startTime, group.endTime)}. ` +
+    `That time is open again.`
+  );
+}
+
+/** The admin cancelled the block; tell the client. All of it, in one text. */
+export function clientAdminGroupCancelled(
+  group: NotifiableGroup,
+  { businessName, origin }: MessageContext
+): string {
+  const lines = [
+    `${businessName}: Your ${group.size} appointments, ` +
+      `${formatSmsTimeRange(group.startTime, group.endTime)}, ` +
+      `have been cancelled. Sorry about that.`,
+  ];
+
+  if (origin) {
+    lines.push(`Book another time: ${origin}`);
+  }
+
+  return lines.join("\n");
+}

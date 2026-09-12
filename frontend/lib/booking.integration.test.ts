@@ -16,7 +16,7 @@
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createBooking } from "./booking";
+import { createBooking, createGroupBooking } from "./booking";
 import { cancelBooking } from "./cancellation";
 import { db } from "./db";
 import { instantForDateMinute } from "./availability";
@@ -907,5 +907,446 @@ describe("consent is asked for only when SMS can send", () => {
 
     expect(result).toMatchObject({ ok: false, code: "CONSENT_REQUIRED" });
     expect(await db.booking.count()).toBe(0);
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * Group bookings
+ *
+ * A party of 2-4 seen back to back is one contiguous block written as N rows.
+ * The block is checked once, as a single appointment of the summed length, so
+ * every guarantee above extends to it — these prove that it actually does, and
+ * in particular that a block can never commit half-written.
+ * ------------------------------------------------------------------------- */
+
+/** The block's own start, far enough from close that 90 minutes fits. */
+const at530pm = instantForDateMinute(targetDate, 17 * HOUR + 30);
+const at600pm = instantForDateMinute(targetDate, 18 * HOUR);
+const at700pm = instantForDateMinute(targetDate, 19 * HOUR);
+const at845pm = instantForDateMinute(targetDate, 20 * HOUR + 45);
+
+describe("group bookings", () => {
+  it("writes one row per person, back to back, under one groupId", async () => {
+    const result = await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, haircut, eyebrows],
+      ...client,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.count).toBe(3);
+    expect(result.groupId).not.toBeNull();
+
+    const rows = await db.booking.findMany({ orderBy: { startTime: "asc" } });
+    expect(rows).toHaveLength(3);
+
+    // 5:30, 6:00, 6:30 — each chained onto the end of the one before, using
+    // that service's own length rather than a fixed step.
+    expect(rows.map((row) => row.startTime.toISOString())).toEqual([
+      at530pm.toISOString(),
+      at600pm.toISOString(),
+      instantForDateMinute(targetDate, 18 * HOUR + 30).toISOString(),
+    ]);
+    expect(rows.map((row) => row.durationMinutes)).toEqual([30, 30, 15]);
+    expect(rows.every((row) => row.groupId === result.groupId)).toBe(true);
+  });
+
+  it("snapshots each person's own service", async () => {
+    await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, eyebrows],
+      ...client,
+    });
+
+    const rows = await db.booking.findMany({ orderBy: { startTime: "asc" } });
+    expect(rows.map((row) => row.serviceName)).toEqual(["Haircut", "Eyebrows"]);
+    expect(rows.map((row) => row.servicePriceCents)).toEqual([2500, 1000]);
+  });
+
+  it("shares one contact but gives every row its own token", async () => {
+    const result = await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, haircut, haircut],
+      ...client,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const rows = await db.booking.findMany({ orderBy: { startTime: "asc" } });
+
+    expect(new Set(rows.map((row) => row.clientPhone)).size).toBe(1);
+    expect(new Set(rows.map((row) => row.clientName)).size).toBe(1);
+    // cancelToken is @unique, so the legs cannot share one; groupId is what
+    // ties them together instead.
+    expect(new Set(rows.map((row) => row.cancelToken)).size).toBe(3);
+    // The token handed back is the earliest leg's — the one every URL uses.
+    expect(result.cancelToken).toBe(rows[0].cancelToken);
+  });
+
+  it("still reports a solo booking as a group of one", async () => {
+    const result = await createBooking({
+      start: at430pm,
+      serviceId: haircut,
+      ...client,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.count).toBe(1);
+    expect(result.groupId).toBeNull();
+    expect((await db.booking.findFirst())?.groupId).toBeNull();
+  });
+});
+
+describe("a group block is all or nothing", () => {
+  it("allows a block that ends exactly when the next booking starts", async () => {
+    // The stated requirement: with 7:00 taken, three 30-minute services can
+    // still start at 5:30 because 5:30 + 90 min ends at 7:00 precisely.
+    await createBooking({ start: at700pm, serviceId: haircut, ...client });
+
+    const result = await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, haircut, haircut],
+      ...client,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(await db.booking.count()).toBe(4);
+  });
+
+  it("refuses the block that would run into it, writing nothing", async () => {
+    await createBooking({ start: at700pm, serviceId: haircut, ...client });
+
+    const result = await createGroupBooking({
+      start: at600pm,
+      serviceIds: [haircut, haircut, haircut],
+      ...client,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: "UNAVAILABLE" });
+    // Only the pre-existing booking; not one leg of the rejected block.
+    expect(await db.booking.count()).toBe(1);
+  });
+
+  it("refuses when a booking sits in the MIDDLE of the block", async () => {
+    // The case a per-leg check written carelessly would miss: the block's own
+    // start is free, and so is its end, but 6:00 is taken.
+    await createBooking({ start: at600pm, serviceId: haircut, ...client });
+
+    const result = await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, haircut, haircut],
+      ...client,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: "UNAVAILABLE" });
+    expect(await db.booking.count()).toBe(1);
+  });
+
+  it("refuses a block that cannot finish before closing", async () => {
+    // 8:45 + 90 min runs to 10:15, past the 10 PM close.
+    const result = await createGroupBooking({
+      start: at845pm,
+      serviceIds: [haircut, haircut, haircut],
+      ...client,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: "UNAVAILABLE" });
+    expect(await db.booking.count()).toBe(0);
+  });
+
+  it("refuses the whole block when any one service is archived", async () => {
+    const result = await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, retired, haircut],
+      ...client,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: "INVALID_SERVICE" });
+    expect(await db.booking.count()).toBe(0);
+  });
+
+  it("refuses a party larger than the maximum", async () => {
+    const result = await createGroupBooking({
+      start: at530pm,
+      serviceIds: [eyebrows, eyebrows, eyebrows, eyebrows, eyebrows],
+      ...client,
+    });
+
+    expect(result).toMatchObject({ ok: false, code: "INVALID_SERVICE" });
+    expect(await db.booking.count()).toBe(0);
+  });
+});
+
+describe("concurrent group bookings", () => {
+  it("lets exactly one win when a block and a single booking overlap", async () => {
+    // The proof that matters. A 90-minute block at 5:30 runs to 7:00, and a
+    // 60-minute booking at 6:00 sits inside it — two starts 30 minutes apart,
+    // neither of which the @unique index on startTime would catch.
+    const [group, single] = await Promise.all([
+      createGroupBooking({
+        start: at530pm,
+        serviceIds: [haircut, haircut, haircut],
+        ...client,
+      }),
+      createBooking({
+        start: at600pm,
+        serviceId: hairAndBeard,
+        clientName: "Grace Hopper",
+        clientPhone: "(619) 987-6543",
+        smsConsent: true,
+      }),
+    ]);
+
+    expect([group, single].filter((result) => result.ok)).toHaveLength(1);
+    expect([group, single].find((result) => !result.ok)).toMatchObject({
+      ok: false,
+      code: "UNAVAILABLE",
+    });
+
+    // 3 if the block won, 1 if the single did — never 4, and never a partial 2.
+    expect(await db.booking.count()).toBe(group.ok ? 3 : 1);
+  });
+
+  it("lets exactly one win when two blocks overlap", async () => {
+    const [a, b] = await Promise.all([
+      createGroupBooking({
+        start: at530pm,
+        serviceIds: [haircut, haircut, haircut],
+        ...client,
+      }),
+      createGroupBooking({
+        start: at600pm,
+        serviceIds: [haircut, haircut],
+        clientName: "Grace Hopper",
+        clientPhone: "(619) 987-6543",
+        smsConsent: true,
+      }),
+    ]);
+
+    expect([a, b].filter((result) => result.ok)).toHaveLength(1);
+    expect(await db.booking.count()).toBe(a.ok ? 3 : 2);
+  });
+
+  it("lets exactly one win when a block and a single share a start", async () => {
+    const [group, single] = await Promise.all([
+      createGroupBooking({
+        start: at530pm,
+        serviceIds: [haircut, haircut],
+        ...client,
+      }),
+      createBooking({
+        start: at530pm,
+        serviceId: eyebrows,
+        clientName: "Grace Hopper",
+        clientPhone: "(619) 987-6543",
+        smsConsent: true,
+      }),
+    ]);
+
+    expect([group, single].filter((result) => result.ok)).toHaveLength(1);
+    expect(await db.booking.count()).toBe(group.ok ? 2 : 1);
+  });
+
+  it("lets both through when they genuinely do not overlap", async () => {
+    // 5:30-6:30 and 7:00: adjacent, not overlapping. Serializable aborts one of
+    // these too, so this also proves the retry loop still recovers for groups.
+    const [group, single] = await Promise.all([
+      createGroupBooking({
+        start: at530pm,
+        serviceIds: [haircut, haircut],
+        ...client,
+      }),
+      createBooking({
+        start: at700pm,
+        serviceId: haircut,
+        clientName: "Grace Hopper",
+        clientPhone: "(619) 987-6543",
+        smsConsent: true,
+      }),
+    ]);
+
+    expect(group.ok).toBe(true);
+    expect(single.ok).toBe(true);
+    expect(await db.booking.count()).toBe(3);
+  });
+});
+
+describe("group cancellation", () => {
+  it("removes every row through the primary token", async () => {
+    const result = await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, haircut, haircut],
+      ...client,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const cancelled = await cancelBooking({ cancelToken: result.cancelToken }, "client");
+
+    expect(cancelled.ok).toBe(true);
+    if (!cancelled.ok) return;
+    expect(cancelled.group).toHaveLength(3);
+    expect(await db.booking.count()).toBe(0);
+  });
+
+  it("removes every row through a NON-primary leg's token too", async () => {
+    // /my-booking and the .ics route both key off a leg, so any of them has to
+    // behave the same as the first.
+    await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, haircut, haircut],
+      ...client,
+    });
+    const rows = await db.booking.findMany({ orderBy: { startTime: "asc" } });
+
+    const cancelled = await cancelBooking(
+      { cancelToken: rows[2].cancelToken },
+      "client"
+    );
+
+    expect(cancelled.ok).toBe(true);
+    expect(await db.booking.count()).toBe(0);
+  });
+
+  it("removes every row when the admin cancels one by id", async () => {
+    await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, haircut],
+      ...client,
+    });
+    const rows = await db.booking.findMany({ orderBy: { startTime: "asc" } });
+
+    const cancelled = await cancelBooking({ id: rows[1].id }, "admin");
+
+    expect(cancelled.ok).toBe(true);
+    expect(await db.booking.count()).toBe(0);
+  });
+
+  it("refuses a second cancellation of the same group", async () => {
+    // `deleteMany` returns a count rather than throwing the way `delete` does,
+    // so without the count check this would report success and send a second
+    // cancellation text.
+    const result = await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, haircut],
+      ...client,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    await cancelBooking({ cancelToken: result.cancelToken }, "client");
+    const again = await cancelBooking({ cancelToken: result.cancelToken }, "client");
+
+    expect(again).toEqual({ ok: false });
+  });
+
+  it("frees the whole block, including the middle of it", async () => {
+    const result = await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, haircut, haircut],
+      ...client,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    await cancelBooking({ cancelToken: result.cancelToken }, "client");
+
+    // 6:00 sat in the middle of the block; nothing should be left holding it.
+    const after = await createBooking({
+      start: at600pm,
+      serviceId: haircut,
+      ...client,
+    });
+    expect(after.ok).toBe(true);
+  });
+});
+
+describe("one message per group", () => {
+  afterEach(async () => {
+    for (const key of [
+      "TWILIO_ACCOUNT_SID",
+      "TWILIO_AUTH_TOKEN",
+      "TWILIO_FROM_NUMBER",
+    ]) {
+      delete process.env[key];
+    }
+    vi.restoreAllMocks();
+    await db.settings.update({ where: { id: 1 }, data: { adminPhone: "" } });
+  });
+
+  /** Every outbound body, in order — not keyed, so duplicates are visible. */
+  function captureAll(): string[] {
+    const bodies: string[] = [];
+
+    process.env.TWILIO_ACCOUNT_SID = "ACtest";
+    process.env.TWILIO_AUTH_TOKEN = "token";
+    process.env.TWILIO_FROM_NUMBER = "+15550000000";
+
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      const body = (init as RequestInit).body as URLSearchParams;
+      bodies.push(`${body.get("To")}|${body.get("Body")}`);
+      return new Response("{}", { status: 201 });
+    });
+
+    return bodies;
+  }
+
+  it("sends one client text and one admin text, not one per person", async () => {
+    await db.settings.update({
+      where: { id: 1 },
+      data: { adminPhone: "+16195550000" },
+    });
+    const bodies = captureAll();
+
+    await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, haircut, haircut],
+      ...client,
+    });
+
+    expect(bodies.filter((b) => b.startsWith("+16191234567|"))).toHaveLength(1);
+    expect(bodies.filter((b) => b.startsWith("+16195550000|"))).toHaveLength(1);
+  });
+
+  it("tells the client how many people and gives one cancel link", async () => {
+    const bodies = captureAll();
+
+    await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, haircut, haircut],
+      origin: "https://availo.example.com",
+      ...client,
+    });
+
+    const message = bodies.find((b) => b.startsWith("+16191234567|"))!;
+    expect(message).toContain("3 people");
+    expect(message.match(/\/cancel\//g)).toHaveLength(1);
+  });
+
+  it("sends one cancellation alert for the whole block", async () => {
+    await db.settings.update({
+      where: { id: 1 },
+      data: { adminPhone: "+16195550000" },
+    });
+
+    const result = await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, haircut, haircut],
+      ...client,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    // Captured only now, so the creation sends above aren't counted.
+    const bodies = captureAll();
+    await cancelBooking({ cancelToken: result.cancelToken }, "client");
+
+    expect(bodies.filter((b) => b.startsWith("+16195550000|"))).toHaveLength(1);
+    expect(bodies.find((b) => b.startsWith("+16195550000|"))).toContain(
+      "3 appointments"
+    );
   });
 });

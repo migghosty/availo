@@ -56,6 +56,30 @@ export async function getBookableService(
   });
 }
 
+/**
+ * Several bookable services at once, for a group booking.
+ *
+ * Deduped into one query rather than N calls to `getBookableService`: this runs
+ * inside `createBooking`'s Serializable transaction, where every extra
+ * statement widens the predicate-lock footprint and lengthens the window in
+ * which another client can conflict. Callers re-expand duplicates themselves —
+ * see `selectionData.ts`.
+ */
+export async function getBookableServicesByIds(
+  ids: number[],
+  client: Db = db
+): Promise<BookableService[]> {
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) return [];
+  if (unique.some((id) => !Number.isInteger(id))) return [];
+
+  return client.service.findMany({
+    where: { id: { in: unique }, isActive: true },
+    orderBy: { id: "asc" },
+    select: BOOKABLE_FIELDS,
+  });
+}
+
 /** Admin view: archived services included, since the admin manages them. */
 export async function getAllServices(client: Db = db) {
   return client.service.findMany({ orderBy: { id: "asc" } });

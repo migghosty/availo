@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { toCalendarEvent } from "@/lib/bookingEvent";
+import { toCalendarEvent, toGroupCalendarEvent } from "@/lib/bookingEvent";
 import { buildIcs } from "@/lib/calendar";
 import { getBusinessAddress, getBusinessName } from "@/lib/settingsData";
 import { getOrigin } from "@/lib/siteUrl";
@@ -31,12 +31,25 @@ export async function GET(
     return new Response("Booking not found", { status: 404 });
   }
 
+  // A group booking is several rows; they become one event spanning the block.
+  const legs = booking.groupId
+    ? await db.booking.findMany({
+        where: { groupId: booking.groupId },
+        orderBy: { startTime: "asc" },
+      })
+    : [booking];
+
   const [origin, address, businessName] = await Promise.all([
     getOrigin(),
     getBusinessAddress(),
     getBusinessName(),
   ]);
-  const ics = buildIcs(toCalendarEvent(booking, { origin, address, businessName }));
+  const context = { origin, address, businessName };
+  const ics = buildIcs(
+    legs.length === 1
+      ? toCalendarEvent(legs[0], context)
+      : toGroupCalendarEvent(legs, context)
+  );
 
   return new Response(ics, {
     headers: {

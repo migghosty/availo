@@ -10,6 +10,32 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    /**
+     * Migrations need a DIRECT connection, not a pooled one.
+     *
+     * `prisma migrate deploy` guards itself with a *session-scoped* advisory
+     * lock (`SELECT pg_advisory_lock(72707369)`) so two migrations can never run
+     * at once. Neon's `-pooler` host is PgBouncer in transaction-pooling mode,
+     * where consecutive statements from one client may land on *different*
+     * backends — so that lock can be taken on one backend and then stranded
+     * there, held by nobody and released by nothing. Every later deploy waits
+     * 10s for it and dies with:
+     *
+     *   Error: P1002 — The database server was reached but timed out.
+     *   Context: Timed out trying to acquire a postgres advisory lock.
+     *
+     * It is a race the pooler usually wins, which is the trap: ten migrations
+     * went through this way before two Preview builds two minutes apart on the
+     * same PR finally collided. Intermittent, and the error names a timeout
+     * rather than the pooler, so it reads like a cold start or an outage.
+     *
+     * `DIRECT_URL` is the same connection string with `-pooler` removed from the
+     * host. Only the CLI reads this file; the *runtime* keeps using the pooled
+     * `DATABASE_URL` via the driver adapter in `lib/db.ts`, which is what a
+     * serverless function wants. The fallback keeps local development working
+     * with a single `DATABASE_URL`, since local Postgres has no pooler in front
+     * of it.
+     */
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });

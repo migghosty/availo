@@ -22,6 +22,8 @@ type Booking = {
   serviceName: string;
   clientName: string;
   clientPhone: string;
+  /** Set when this appointment is one leg of a back-to-back group booking. */
+  groupId: string | null;
 };
 
 function formatTime(date: Date) {
@@ -47,11 +49,17 @@ function DayBookings({
   bookings,
   hours,
   optedOut,
+  groupSizes,
+  groupPositions,
 }: {
   bookings: Booking[];
   hours: string;
   /** Numbers that have texted STOP, so a silent client reads as a choice. */
   optedOut: Set<string>;
+  /** groupId -> how many rows the group really has. See `loadGroupShape`. */
+  groupSizes: Map<string, number>;
+  /** booking id -> its 1-based place in its group. */
+  groupPositions: Map<number, number>;
 }) {
   return (
     <>
@@ -75,6 +83,17 @@ function DayBookings({
                     {" "}
                     · {booking.durationMinutes} min
                   </span>
+                  {/* Rows stay one per appointment — the barber works one head
+                      at a time and wants 5:30 where 5:30 belongs — but a leg of
+                      a block has to say so, because cancelling it takes all of
+                      them. */}
+                  {groupSizes.get(booking.groupId ?? "") ? (
+                    <span className="text-gray-400 dark:text-slate-500 font-normal">
+                      {" "}
+                      · {groupPositions.get(booking.id)} of{" "}
+                      {groupSizes.get(booking.groupId ?? "")}
+                    </span>
+                  ) : null}
                 </p>
                 {/* From the booking's own snapshot, so an archived or renamed
                     service still shows what was actually booked. */}
@@ -101,7 +120,10 @@ function DayBookings({
                 )}
               </div>
               <div className="flex-none">
-                <AdminCancelBookingButton bookingId={booking.id} />
+                <AdminCancelBookingButton
+                  bookingId={booking.id}
+                  groupSize={groupSizes.get(booking.groupId ?? "") ?? 1}
+                />
               </div>
             </div>
           ))}
@@ -109,6 +131,44 @@ function DayBookings({
       )}
     </>
   );
+}
+
+/**
+ * How big each visible group really is, and where each row sits in it.
+ *
+ * Counted from the whole table rather than from the rows on screen: the
+ * dashboard only lists upcoming appointments, so a block whose first person has
+ * already been seen would otherwise read "1 of 2" and offer to cancel two — when
+ * cancelling actually removes all three, past leg included. The number in the
+ * confirm dialog has to be the number that disappears.
+ */
+async function loadGroupShape(bookings: { groupId: string | null }[]) {
+  const groupIds = [
+    ...new Set(
+      bookings
+        .map((booking) => booking.groupId)
+        .filter((id): id is string => id !== null)
+    ),
+  ];
+
+  const groupSizes = new Map<string, number>();
+  const groupPositions = new Map<number, number>();
+  if (groupIds.length === 0) return { groupSizes, groupPositions };
+
+  const legs = await db.booking.findMany({
+    where: { groupId: { in: groupIds } },
+    orderBy: { startTime: "asc" },
+    select: { id: true, groupId: true },
+  });
+
+  for (const leg of legs) {
+    if (!leg.groupId) continue;
+    const position = (groupSizes.get(leg.groupId) ?? 0) + 1;
+    groupSizes.set(leg.groupId, position);
+    groupPositions.set(leg.id, position);
+  }
+
+  return { groupSizes, groupPositions };
 }
 
 export default async function DashboardPage() {
@@ -129,6 +189,8 @@ export default async function DashboardPage() {
     select: { phone: true },
   });
   const optedOut = new Set(optedOutRows.map((row) => row.phone));
+
+  const { groupSizes, groupPositions } = await loadGroupShape(bookings);
 
   // There's no single open-slot count any more: a 15-minute service fits into
   // gaps an hour-long one can't. Counting with the shortest active service
@@ -225,6 +287,8 @@ export default async function DashboardPage() {
               bookings={byDate.get(section.key) ?? []}
               hours={hoursFor(section.key)}
               optedOut={optedOut}
+              groupSizes={groupSizes}
+              groupPositions={groupPositions}
             />
           </section>
         ))}

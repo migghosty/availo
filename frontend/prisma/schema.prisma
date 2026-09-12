@@ -46,9 +46,22 @@ model Booking {
   /// per number — a per-appointment timestamp beats one stale agreement.
   smsConsentAt DateTime?
 
+  /// Ties the rows of one back-to-back group booking together. A party of
+  /// three is three rows, not one long one — that is what keeps every stored
+  /// durationMinutes under MAX_DURATION_MINUTES (480), the assumption
+  /// getRelevantBookings' 24-hour lookback rests on. A single row for four
+  /// eight-hour services would be 32 hours long and quietly break it.
+  ///
+  /// Null for a solo booking. There is deliberately no groupSize or groupIndex
+  /// column: size is the row count, order is startTime ascending, and
+  /// cancellation is all-or-nothing, so both stay exact on their own. A stored
+  /// copy could only ever disagree.
+  groupId String?
+
   @@index([startTime])
   @@index([serviceId])
   @@index([clientPhone])
+  @@index([groupId])
 }
 
 model Settings {

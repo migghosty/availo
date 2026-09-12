@@ -7,11 +7,16 @@ import { PhoneField } from "@/components/PhoneField";
 
 export function BookingForm({
   startMs,
-  serviceId,
+  serviceIds,
   askForSmsConsent,
 }: {
   startMs: number;
-  serviceId: number;
+  /**
+   * One id per person, in the order they'll be seen. A party of one is the
+   * ordinary booking, and everything below reads the same either way — a group
+   * has one contact, so there are no extra fields to collect.
+   */
+  serviceIds: number[];
   /**
    * Whether texting is switched on. Passed down rather than read here: this is
    * a client component, and the Twilio config is server-only. Asking for
@@ -20,7 +25,8 @@ export function BookingForm({
    */
   askForSmsConsent: boolean;
 }) {
-  const boundAction = bookSlotAction.bind(null, startMs, serviceId);
+  const boundAction = bookSlotAction.bind(null, startMs, serviceIds);
+  const people = serviceIds.length;
   const [error, formAction, isPending] = useActionState(boundAction, null);
 
   return (
@@ -50,8 +56,9 @@ export function BookingForm({
           className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
         />
         <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
-          So we can reach you about this appointment — and how you&apos;ll look
-          it up later.
+          {people > 1
+            ? "One contact for the whole group — this is where the confirmation goes, and how you'll look the booking up later."
+            : "So we can reach you about this appointment — and how you'll look it up later."}
         </p>
       </div>
 
@@ -106,7 +113,11 @@ export function BookingForm({
         disabled={isPending}
         className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
       >
-        {isPending ? "Booking…" : "Confirm Booking"}
+        {isPending
+          ? "Booking…"
+          : people > 1
+            ? `Confirm ${people} Appointments`
+            : "Confirm Booking"}
       </button>
     </form>
   );
