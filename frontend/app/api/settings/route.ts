@@ -4,6 +4,8 @@ import { DEFAULT_CONFIG } from "@/lib/scheduleData";
 import { MAX_ADDRESS_LENGTH, normalizeAddress } from "@/lib/settings";
 import { normalizePhone } from "@/lib/phone";
 import { NextRequest } from "next/server";
+import { revalidateTag } from "next/cache";
+import { BUSINESS_NAME_TAG } from "@/lib/settingsData";
 
 async function getOrCreateSettings() {
   return db.settings.upsert({
@@ -100,6 +102,12 @@ export async function PUT(req: NextRequest) {
       businessName,
     },
   });
+
+  // Expire now rather than stale-while-revalidate, so the admin sees the new
+  // name on their next page load instead of one load later.
+  if (businessName !== current.businessName) {
+    revalidateTag(BUSINESS_NAME_TAG, { expire: 0 });
+  }
 
   return Response.json(settings);
 }
