@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   DAY_ABBREVIATIONS,
   daysInMonth,
@@ -10,10 +9,15 @@ import {
 /**
  * A month grid for picking a day.
  *
- * Deliberately server-rendered — every cell and both month arrows are plain
- * links, so there is no hydration cost and the calendar works without JS. The
- * caller owns URL construction via `hrefForDate`, which keeps this component
- * reusable for any "pick a day" surface.
+ * Presentational and callback-driven: the caller (`SlotPicker`) holds the
+ * selection in client state, so tapping a day or a month arrow re-renders
+ * locally instead of round-tripping to the server. It was once all plain
+ * links, server-rendered with no hydration — but every tap then cost a full
+ * dynamic render, and Next prefetched every visible cell, so a phone fired
+ * ~40 useless requests per page view. See "Picking a time" in `PLAN.md`.
+ *
+ * It has no "use client" of its own and uses no hooks; it simply runs in
+ * whichever client component renders it.
  *
  * Sunday-first, matching how consumer calendars read (and `DAY_ABBREVIATIONS`,
  * which is already indexed 0 = Sunday). The admin schedule editor is
@@ -29,22 +33,27 @@ export function MonthCalendar({
   availableDates,
   selectedDate,
   todayKey,
-  hrefForDate,
-  prevHref,
-  nextHref,
-  countForDate,
+  onSelectDate,
+  onPrev,
+  onNext,
+  labelForDate,
 }: {
   monthKey: string;
   /** Date keys that can be picked. Everything else renders inert. */
   availableDates: Set<string>;
   selectedDate?: string;
   todayKey: string;
-  hrefForDate: (dateKey: string) => string;
+  onSelectDate: (dateKey: string) => void;
   /** `null` disables the arrow — used at the edges of the booking horizon. */
-  prevHref: string | null;
-  nextHref: string | null;
-  /** Optional, for screen-reader labels only; never rendered visually. */
-  countForDate?: (dateKey: string) => number | undefined;
+  onPrev: (() => void) | null;
+  onNext: (() => void) | null;
+  /**
+   * Screen-reader label for an available day, never rendered visually.
+   * Supplied by the caller (pre-formatted on the server) so no date
+   * formatting runs during hydration, where Node's and the browser's ICU can
+   * disagree on whitespace and trigger a mismatch.
+   */
+  labelForDate: (dateKey: string) => string;
 }) {
   const leadingBlanks = weekdayOfDateKey(firstDateKeyOfMonth(monthKey));
   const totalDays = daysInMonth(monthKey);
@@ -52,11 +61,11 @@ export function MonthCalendar({
   return (
     <div className="max-w-md">
       <div className="flex items-center justify-between mb-3">
-        <MonthArrow href={prevHref} label="Previous month" glyph="‹" />
+        <MonthArrow onClick={onPrev} label="Previous month" glyph="‹" />
         <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
           {formatMonthLabel(monthKey)}
         </h2>
-        <MonthArrow href={nextHref} label="Next month" glyph="›" />
+        <MonthArrow onClick={onNext} label="Next month" glyph="›" />
       </div>
 
       <div className="grid grid-cols-7 gap-1" aria-hidden>
@@ -101,32 +110,21 @@ export function MonthCalendar({
             );
           }
 
-          const count = countForDate?.(dateKey);
-          const label = new Intl.DateTimeFormat("en-US", {
-            timeZone: "UTC",
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-          }).format(new Date(`${dateKey}T12:00:00Z`));
-
           return (
-            <Link
+            <button
               key={dateKey}
-              href={hrefForDate(dateKey)}
-              aria-current={isSelected ? "date" : undefined}
-              aria-label={
-                count === undefined
-                  ? label
-                  : `${label} — ${count} time${count === 1 ? "" : "s"} available`
-              }
-              className={`${CELL_BASE} font-medium border${todayRing} ${
+              type="button"
+              onClick={() => onSelectDate(dateKey)}
+              aria-pressed={isSelected}
+              aria-label={labelForDate(dateKey)}
+              className={`${CELL_BASE} cursor-pointer font-medium border${todayRing} ${
                 isSelected
                   ? "bg-blue-600 dark:bg-blue-500 border-blue-600 dark:border-blue-500 text-white"
                   : "bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 hover:border-blue-400 dark:hover:border-blue-700"
               }`}
             >
               {dayOfMonth}
-            </Link>
+            </button>
           );
         })}
       </div>
@@ -135,17 +133,17 @@ export function MonthCalendar({
 }
 
 function MonthArrow({
-  href,
+  onClick,
   label,
   glyph,
 }: {
-  href: string | null;
+  onClick: (() => void) | null;
   label: string;
   glyph: string;
 }) {
   const shared = "w-9 h-9 flex items-center justify-center rounded-lg text-lg";
 
-  if (!href) {
+  if (!onClick) {
     return (
       <span
         aria-hidden
@@ -157,12 +155,13 @@ function MonthArrow({
   }
 
   return (
-    <Link
-      href={href}
+    <button
+      type="button"
+      onClick={onClick}
       aria-label={label}
-      className={`${shared} text-slate-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-neutral-900 transition-colors`}
+      className={`${shared} cursor-pointer text-slate-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-neutral-900 transition-colors`}
     >
       {glyph}
-    </Link>
+    </button>
   );
 }

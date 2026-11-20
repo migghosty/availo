@@ -10,8 +10,9 @@ import { getOrigin } from "@/lib/siteUrl";
 /**
  * "Add to calendar" for a confirmed booking.
  *
- * Server-rendered — both targets are links, so there's no hydration cost,
- * following the same reasoning as `MonthCalendar.tsx`.
+ * Server-rendered — both targets are links, so there's no hydration cost.
+ * (Unlike the `/slots` calendar, nothing here is tapped repeatedly, so there
+ * is no round trip worth trading hydration for.)
  *
  * Two deliberate choices, both about iPhone:
  *
