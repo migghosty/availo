@@ -39,11 +39,11 @@ export function HistorySearchForm({
           name="phone"
           defaultValue={defaultValue}
           required
-          className="flex-1 min-w-0 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-slate-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+          className="flex-1 min-w-0 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
         />
         <button
           type="submit"
-          className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap"
+          className="bg-blue-600 dark:shadow-glow hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap"
         >
           Search
         </button>
@@ -51,7 +51,7 @@ export function HistorySearchForm({
       {clearHref && (
         <Link
           href={clearHref}
-          className="inline-block text-xs text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 p-2 -m-2 mt-1.5"
+          className="inline-block text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-2 -m-2 mt-1.5"
         >
           Clear search
         </Link>

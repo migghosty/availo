@@ -42,7 +42,7 @@ export function GroupServicePicker({
 
   return (
     <div className="space-y-4">
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800">
+      <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 divide-y divide-gray-100 dark:divide-blue-500/10">
         {selected.map((service, index) => (
           <div
             key={index}
@@ -60,7 +60,7 @@ export function GroupServicePicker({
                 name="service"
                 value={service.id}
                 onChange={(e) => setAt(index, Number(e.target.value))}
-                className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {services.map((option) => (
                   <option key={option.id} value={option.id}>
@@ -83,14 +83,14 @@ export function GroupServicePicker({
         <span className="text-gray-500 dark:text-slate-400">
           {count} people &middot; {formatDuration(minutes)} total
         </span>
-        <span className="font-semibold text-amber-600 dark:text-amber-400">
+        <span className="font-semibold text-blue-600 dark:text-blue-400">
           {formatPrice(price)}
         </span>
       </div>
 
       <button
         type="submit"
-        className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
+        className="w-full bg-blue-600 dark:shadow-glow hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
       >
         Continue to times
       </button>

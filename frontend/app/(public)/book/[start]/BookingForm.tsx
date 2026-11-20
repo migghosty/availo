@@ -41,7 +41,7 @@ export function BookingForm({
           type="text"
           autoComplete="name"
           required
-          className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
 
@@ -53,7 +53,7 @@ export function BookingForm({
           id="clientPhone"
           name="clientPhone"
           required
-          className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
         <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
           {people > 1
@@ -76,7 +76,7 @@ export function BookingForm({
           required
           // A checkbox is a small target; the padding gives it a comfortable
           // hit area without changing how it looks.
-          className="mt-0.5 h-4 w-4 flex-none accent-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500 rounded"
+          className="mt-0.5 h-4 w-4 flex-none accent-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
         />
         <label
           htmlFor="smsConsent"
@@ -87,14 +87,14 @@ export function BookingForm({
           apply. Reply STOP to opt out.{" "}
           <Link
             href="/sms-terms"
-            className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 underline"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
           >
             SMS Terms
           </Link>{" "}
           &middot;{" "}
           <Link
             href="/privacy"
-            className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 underline"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
           >
             Privacy
           </Link>
@@ -111,7 +111,7 @@ export function BookingForm({
       <button
         type="submit"
         disabled={isPending}
-        className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
+        className="w-full bg-blue-600 dark:shadow-glow hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
       >
         {isPending
           ? "Booking…"

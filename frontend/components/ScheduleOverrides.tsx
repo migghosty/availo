@@ -145,7 +145,7 @@ export function ScheduleOverrides({ overrides }: { overrides: OverrideRecord[] }
 
   return (
     <div className="space-y-4">
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800">
+      <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 divide-y divide-gray-100 dark:divide-blue-500/10">
         {overrides.length === 0 ? (
           <p className="px-5 py-4 sm:px-6 text-sm text-gray-400 dark:text-slate-500">
             No date-specific changes. Your weekly schedule applies to every day.
@@ -191,7 +191,7 @@ export function ScheduleOverrides({ overrides }: { overrides: OverrideRecord[] }
       </div>
 
       {adding ? (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-5 sm:p-6 space-y-4">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-5 sm:p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               Date
@@ -201,7 +201,7 @@ export function ScheduleOverrides({ overrides }: { overrides: OverrideRecord[] }
               value={date}
               min={todayInTimezone()}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full sm:w-auto border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full sm:w-auto border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -210,7 +210,7 @@ export function ScheduleOverrides({ overrides }: { overrides: OverrideRecord[] }
               type="checkbox"
               checked={isClosed}
               onChange={(e) => setIsClosed(e.target.checked)}
-              className="w-4 h-4 accent-amber-500"
+              className="w-4 h-4 accent-blue-600"
             />
             Closed all day
           </label>
@@ -229,7 +229,7 @@ export function ScheduleOverrides({ overrides }: { overrides: OverrideRecord[] }
                       setRows(rows.map((r) => (r.id === row.id ? { ...r, start: e.target.value } : r)))
                     }
                     aria-label="Start time"
-                    className="flex-1 min-w-0 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="flex-1 min-w-0 border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <span className="text-gray-400 dark:text-slate-500 flex-none">–</span>
                   <input
@@ -239,7 +239,7 @@ export function ScheduleOverrides({ overrides }: { overrides: OverrideRecord[] }
                       setRows(rows.map((r) => (r.id === row.id ? { ...r, end: e.target.value } : r)))
                     }
                     aria-label="End time"
-                    className="flex-1 min-w-0 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="flex-1 min-w-0 border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   {rows.length > 1 && (
                     <button
@@ -256,7 +256,7 @@ export function ScheduleOverrides({ overrides }: { overrides: OverrideRecord[] }
               <button
                 type="button"
                 onClick={() => setRows([...rows, newRow()])}
-                className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 font-medium p-2 -m-2"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium p-2 -m-2"
               >
                 + Add hours
               </button>
@@ -274,7 +274,7 @@ export function ScheduleOverrides({ overrides }: { overrides: OverrideRecord[] }
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="flex-1 sm:flex-none bg-amber-500 hover:bg-amber-600 text-white font-medium px-6 py-2.5 rounded-lg transition-colors disabled:opacity-60"
+              className="flex-1 sm:flex-none bg-blue-600 dark:shadow-glow hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors disabled:opacity-60"
             >
               {saving ? "Saving…" : "Save date"}
             </button>
@@ -294,7 +294,7 @@ export function ScheduleOverrides({ overrides }: { overrides: OverrideRecord[] }
         <button
           type="button"
           onClick={() => startAdding()}
-          className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 font-medium p-2 -m-2"
+          className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium p-2 -m-2"
         >
           + Add a date-specific change
         </button>

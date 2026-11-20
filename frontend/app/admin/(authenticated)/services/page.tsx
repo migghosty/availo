@@ -20,7 +20,7 @@ export default async function ServicesPage() {
           </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 divide-y divide-gray-100 dark:divide-blue-500/10">
           {active.length === 0 ? (
             <p className="px-5 py-4 sm:px-6 text-sm text-gray-400 dark:text-slate-500">
               No services yet — add one below. Clients can&apos;t book anything
@@ -46,7 +46,7 @@ export default async function ServicesPage() {
             </p>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800">
+          <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 divide-y divide-gray-100 dark:divide-blue-500/10">
             {archived.map((service) => (
               <ServiceListItem key={service.id} service={service} />
             ))}
@@ -59,7 +59,7 @@ export default async function ServicesPage() {
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Add a Service</h2>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-6">
           <CreateServiceForm />
         </div>
       </div>

@@ -37,19 +37,19 @@ export default async function LandingPage() {
       </div>
 
       {services.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-8 text-center">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-8 text-center">
           <p className="text-gray-500 dark:text-slate-400">
             No services available right now. Check back soon!
           </p>
         </div>
       ) : (
         /* Each row is the whole tap target, not a small inline link. */
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800 overflow-hidden">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 divide-y divide-gray-100 dark:divide-blue-500/10 overflow-hidden">
           {services.map((service) => (
             <Link
               key={service.id}
               href={`/slots?service=${service.id}`}
-              className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5 hover:bg-amber-50/60 dark:hover:bg-amber-500/10 active:bg-amber-100/60 dark:active:bg-amber-500/15 transition-colors"
+              className="flex items-center justify-between gap-3 px-4 py-3.5 sm:px-5 hover:bg-blue-50/60 dark:hover:bg-blue-500/10 active:bg-blue-100/60 dark:active:bg-blue-500/15 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <span className="text-xl flex-none" aria-hidden>
@@ -63,7 +63,7 @@ export default async function LandingPage() {
                 <span className="text-sm text-gray-500 dark:text-slate-400">
                   {formatDuration(service.durationMinutes)}
                 </span>
-                <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                <span className="text-blue-600 dark:text-blue-400 font-semibold">
                   {formatPrice(service.priceCents)}
                 </span>
                 <span className="text-gray-300 dark:text-slate-600" aria-hidden>
@@ -78,7 +78,7 @@ export default async function LandingPage() {
       {services.length > 0 && (
         <Link
           href="/group"
-          className="block w-full mt-4 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold text-center py-3 rounded-xl transition-colors"
+          className="block w-full mt-4 bg-blue-600 dark:shadow-glow hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-center py-3 rounded-xl transition-colors"
         >
           Book for multiple people
         </Link>

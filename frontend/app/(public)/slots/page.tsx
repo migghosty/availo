@@ -139,7 +139,7 @@ export default async function SlotsPage({
       </div>
 
       {availableDates.size === 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-12 text-center">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-12 text-center">
           <p className="text-gray-500 dark:text-slate-400">
             No {formatDuration(durationMin)} openings right now.
           </p>
@@ -147,7 +147,7 @@ export default async function SlotsPage({
               group the useful advice is to shrink the block, not the service. */}
           <Link
             href={isGroup ? "/group" : "/"}
-            className="inline-block mt-4 text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 text-sm font-medium"
+            className="inline-block mt-4 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
           >
             {isGroup
               ? "Try fewer people or shorter services →"
@@ -159,7 +159,7 @@ export default async function SlotsPage({
           {/* Card framing starts at sm:. On a phone the calendar sits directly on
               the page so the full width goes to the day cells — the difference
               between a 42px and a 46px tap target. */}
-          <div className="sm:bg-white sm:dark:bg-slate-900 sm:rounded-xl sm:border sm:border-gray-200 sm:dark:border-slate-800 sm:p-5">
+          <div className="sm:bg-white sm:dark:bg-neutral-950 sm:rounded-xl sm:border sm:border-gray-200 sm:dark:border-blue-500/15 sm:p-5">
             <MonthCalendar
               monthKey={visibleMonth}
               availableDates={availableDates}
@@ -188,7 +188,7 @@ export default async function SlotsPage({
                     <Link
                       key={start.getTime()}
                       href={`/book/${start.getTime()}?${selectionQuery}`}
-                      className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-800 px-2 py-3 text-center text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-amber-400 dark:hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 hover:shadow-sm transition-all"
+                      className="bg-white dark:bg-neutral-950 rounded-lg border border-gray-200 dark:border-blue-500/15 px-2 py-3 text-center text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:shadow-sm transition-all"
                     >
                       {formatTime(start)}
                     </Link>
@@ -196,7 +196,7 @@ export default async function SlotsPage({
                 </div>
               </>
             ) : (
-              <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-8 text-center">
+              <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-8 text-center">
                 <p className="text-gray-600 dark:text-slate-300 font-medium">
                   {selectedDate
                     ? "No times available on this day."

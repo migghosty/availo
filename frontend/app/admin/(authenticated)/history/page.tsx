@@ -50,7 +50,7 @@ const STATUS_BADGE: Record<HistoryStatus, { label: string; className: string }> 
   },
   past: {
     label: "Past",
-    className: "bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-slate-300",
+    className: "bg-gray-100 text-gray-600 dark:bg-neutral-900 dark:text-slate-300",
   },
   cancelled: {
     label: "Cancelled",
@@ -104,14 +104,14 @@ function EntryCard({ entry }: { entry: HistoryEntry }) {
           calling back is the natural next step after a cancellation. */}
       <a
         href={`tel:${entry.clientPhone}`}
-        className="inline-block text-xs text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 p-2 -m-2 mt-0.5"
+        className="inline-block text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-2 -m-2 mt-0.5"
       >
         {formatPhone(entry.clientPhone)}
       </a>
 
       <ul className="mt-3 space-y-1 text-xs text-gray-500 dark:text-slate-400">
         <li className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-slate-500 flex-none" />
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-neutral-500 flex-none" />
           Booked {stampFormat.format(entry.bookedAt)}
         </li>
         {entry.cancelledAt && (
@@ -199,14 +199,14 @@ export default async function HistoryPage({
         </p>
       )}
 
-      <div className="inline-flex rounded-lg bg-gray-100 dark:bg-slate-800 p-1 mb-5">
+      <div className="inline-flex rounded-lg bg-gray-100 dark:bg-neutral-900 p-1 mb-5">
         {tabs.map((tab) => (
           <Link
             key={tab.filter}
             href={historyHref({ filter: tab.filter, phone: linkPhone })}
             className={`text-sm px-4 py-1.5 rounded-md transition-colors ${
               tab.filter === filter
-                ? "bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-sm font-medium"
+                ? "bg-white dark:bg-neutral-950 text-slate-800 dark:text-slate-100 shadow-sm font-medium"
                 : "text-gray-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             }`}
           >
@@ -216,7 +216,7 @@ export default async function HistoryPage({
       </div>
 
       {invalidPhone ? null : entries.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 text-sm text-gray-400 dark:text-slate-500">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-4 text-sm text-gray-400 dark:text-slate-500">
           {searchPhone
             ? filter === "cancelled"
               ? "No cancellations for this number."
@@ -226,7 +226,7 @@ export default async function HistoryPage({
               : "No bookings yet."}
         </div>
       ) : (
-        <ul className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800">
+        <ul className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 divide-y divide-gray-100 dark:divide-blue-500/10">
           {entries.map((entry) => (
             <EntryCard key={entry.key} entry={entry} />
           ))}
@@ -238,7 +238,7 @@ export default async function HistoryPage({
           <Link
             href={historyHref({ filter, limit: nextLimit, phone: linkPhone })}
             scroll={false}
-            className="inline-block text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 px-4 py-2"
+            className="inline-block text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 px-4 py-2"
           >
             Show older
           </Link>

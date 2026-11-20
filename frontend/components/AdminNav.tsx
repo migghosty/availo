@@ -21,12 +21,12 @@ export function AdminNav() {
   }
 
   return (
-    <nav className="bg-slate-800 dark:bg-slate-900 text-white shadow-md">
+    <nav className="bg-black text-white shadow-glow-bar">
       <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center justify-between py-3">
           <Link
             href="/admin/dashboard"
-            className="font-bold text-amber-400 text-lg tracking-tight"
+            className="font-bold text-blue-400 drop-shadow-[0_0_8px_rgb(59_130_246/0.8)] text-lg tracking-tight"
           >
             ✂ Availo
           </Link>
@@ -49,8 +49,8 @@ export function AdminNav() {
               href={item.href}
               className={`text-center sm:text-left text-xs sm:text-sm whitespace-nowrap px-1 sm:px-3 py-2 rounded transition-colors ${
                 isActive(item.href)
-                  ? "bg-slate-700 text-white"
-                  : "text-slate-300 hover:text-white hover:bg-slate-700"
+                  ? "bg-blue-500/15 text-white ring-1 ring-inset ring-blue-500/40"
+                  : "text-slate-300 hover:text-white hover:bg-white/10"
               }`}
             >
               {item.label}

@@ -41,12 +41,12 @@ export default async function CancelPage({
   if (!booking) {
     return (
       <div className="max-w-md">
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-8 text-center">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-8 text-center">
           <p className="text-gray-600 dark:text-slate-300 font-medium">Booking not found.</p>
           <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">
             This link may have already been used or is invalid.
           </p>
-          <Link href="/slots" className="inline-block mt-4 text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 text-sm font-medium">
+          <Link href="/slots" className="inline-block mt-4 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium">
             View available slots →
           </Link>
         </div>
@@ -80,7 +80,7 @@ export default async function CancelPage({
         </p>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6 mb-4">
+      <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-6 mb-4">
         <dl className="space-y-3 text-sm">
           <div className="flex justify-between gap-3">
             <dt className="text-gray-500 dark:text-slate-400 flex-none">Date &amp; time</dt>
@@ -123,7 +123,7 @@ export default async function CancelPage({
         </dl>
 
         {isGroup && (
-          <ol className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-800 space-y-2 text-sm">
+          <ol className="mt-4 pt-4 border-t border-gray-100 dark:border-blue-500/15 space-y-2 text-sm">
             {group.legs.map((leg) => (
               <li key={leg.id} className="flex items-center justify-between gap-3">
                 <span className="font-medium text-slate-700 dark:text-slate-200 flex-none tabular-nums">

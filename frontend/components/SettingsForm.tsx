@@ -46,8 +46,8 @@ function PillGroup({
             onClick={() => onChange(option)}
             className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
               value === option
-                ? "bg-amber-500 border-amber-500 text-white"
-                : "border-gray-300 dark:border-slate-700 text-gray-700 dark:text-slate-300 hover:border-amber-400 dark:hover:border-amber-500"
+                ? "bg-blue-600 dark:shadow-glow border-blue-600 text-white"
+                : "border-gray-300 dark:border-neutral-700 text-gray-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-blue-500"
             }`}
           >
             {format(option)}
@@ -121,7 +121,7 @@ export function SettingsForm({ current }: { current: SettingsValues }) {
         How long each appointment takes is set per service on the{" "}
         <Link
           href="/admin/services"
-          className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 font-medium"
+          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
         >
           Services
         </Link>{" "}
@@ -138,7 +138,7 @@ export function SettingsForm({ current }: { current: SettingsValues }) {
       />
 
       {/* Not scheduling knobs like the pills above, so these sit below a divider. */}
-      <div className="pt-6 border-t border-gray-100 dark:border-slate-800">
+      <div className="pt-6 border-t border-gray-100 dark:border-blue-500/15">
         <label
           htmlFor="businessName"
           className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2"
@@ -153,7 +153,7 @@ export function SettingsForm({ current }: { current: SettingsValues }) {
           value={values.businessName}
           onChange={(e) => set("businessName", e.target.value)}
           placeholder="Ada's Barbershop"
-          className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
         <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">
           Shown in the site header, in every text you send, on calendar events
@@ -175,7 +175,7 @@ export function SettingsForm({ current }: { current: SettingsValues }) {
           value={values.address}
           onChange={(e) => set("address", e.target.value)}
           placeholder={"123 Main St\nSpringfield, CA 90210"}
-          className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
         <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">
           Where clients should go. Added to the calendar event when they tap
@@ -195,7 +195,7 @@ export function SettingsForm({ current }: { current: SettingsValues }) {
             name="adminPhone"
             defaultValue={current.adminPhone}
             onValueChange={(value) => set("adminPhone", value)}
-            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">
             Texted when someone books or cancels. Leave empty to turn those
@@ -214,7 +214,7 @@ export function SettingsForm({ current }: { current: SettingsValues }) {
         <button
           type="submit"
           disabled={saving || !isDirty}
-          className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-6 py-2.5 rounded-lg transition-colors disabled:opacity-60"
+          className="bg-blue-600 dark:shadow-glow hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save"}
         </button>

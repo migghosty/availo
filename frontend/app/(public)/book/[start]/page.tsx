@@ -84,7 +84,7 @@ export default async function BookSlotPage({
   const backLink = (
     <Link
       href={slotsHref}
-      className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300"
+      className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
     >
       ← Back to times
     </Link>
@@ -94,7 +94,7 @@ export default async function BookSlotPage({
     return (
       <div className="max-w-md">
         {backLink}
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-8 text-center mt-4">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-8 text-center mt-4">
           <p className="text-gray-600 dark:text-slate-300 font-medium">
             That time isn&apos;t available.
           </p>
@@ -103,7 +103,7 @@ export default async function BookSlotPage({
           </p>
           <Link
             href={slotsHref}
-            className="inline-block mt-4 text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 text-sm font-medium"
+            className="inline-block mt-4 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
           >
             View other available times →
           </Link>
@@ -134,7 +134,7 @@ export default async function BookSlotPage({
           when each person is actually seen, which is the part a group has to
           agree on before they confirm. */}
       {isGroup && (
-        <div className="mb-6 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800">
+        <div className="mb-6 bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 divide-y divide-gray-100 dark:divide-blue-500/10">
           {selectionLegs(start, selection).map((leg) => (
             <div
               key={leg.index}
@@ -154,7 +154,7 @@ export default async function BookSlotPage({
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6">
+      <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-6">
         {/* The consent checkbox promises a text, so it only appears when texts
             can actually be sent. `createBooking` relaxes its own consent check
             under the same condition — the two must stay in step. */}

@@ -54,7 +54,7 @@ export default async function AboutPage() {
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 underline"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
             >
               Get directions
             </a>
@@ -70,7 +70,7 @@ export default async function AboutPage() {
             {GALLERY.map((photo) => (
               <div
                 key={photo.src}
-                className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-slate-800"
+                className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-neutral-900"
               >
                 {/* `fill` + a square wrapper means photos of any dimensions drop
                     in without being measured first. `sizes` matters here: two

@@ -66,11 +66,11 @@ function DayBookings({
       <p className="text-xs text-gray-400 dark:text-slate-500 mb-2">{hours}</p>
 
       {bookings.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 text-sm text-gray-400 dark:text-slate-500">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-4 text-sm text-gray-400 dark:text-slate-500">
           No bookings
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 divide-y divide-gray-100 dark:divide-blue-500/10">
           {bookings.map((booking) => (
             <div
               key={booking.id}
@@ -109,7 +109,7 @@ function DayBookings({
                     the readable one in the text. p-2 -m-2 for the hit area. */}
                 <a
                   href={`tel:${booking.clientPhone}`}
-                  className="inline-block text-xs text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 p-2 -m-2 mt-0.5"
+                  className="inline-block text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-2 -m-2 mt-0.5"
                 >
                   {formatPhone(booking.clientPhone)}
                 </a>
@@ -244,13 +244,13 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Dashboard</h1>
         <Link
           href="/admin/schedule"
-          className="bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex-none"
+          className="bg-blue-600 dark:shadow-glow hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex-none"
         >
           Edit schedule
         </Link>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-4 sm:px-5 mb-7 flex items-center justify-between gap-3">
+      <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-4 sm:px-5 mb-7 flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
             {bookings.length} upcoming booking{bookings.length === 1 ? "" : "s"}
@@ -261,7 +261,7 @@ export default async function DashboardPage() {
                 No active services —{" "}
                 <Link
                   href="/admin/services"
-                  className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 font-medium"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
                 >
                   add one
                 </Link>{" "}

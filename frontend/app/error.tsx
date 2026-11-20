@@ -15,7 +15,7 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center px-4">
+    <div className="min-h-screen page-glow bg-gray-50 dark:bg-black flex items-center justify-center px-4">
       <div className="text-center max-w-sm">
         <p className="text-4xl mb-4 text-gray-400 dark:text-slate-500">⚠</p>
         <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Something went wrong</h1>
@@ -23,13 +23,13 @@ export default function GlobalError({
         <div className="flex gap-3 justify-center">
           <button
             onClick={reset}
-            className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
+            className="bg-blue-600 dark:shadow-glow hover:bg-blue-700 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors"
           >
             Try again
           </button>
           <Link
             href="/"
-            className="border border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 font-medium px-5 py-2 rounded-lg text-sm transition-colors"
+            className="border border-gray-200 dark:border-neutral-700 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-neutral-900 font-medium px-5 py-2 rounded-lg text-sm transition-colors"
           >
             Go home
           </Link>

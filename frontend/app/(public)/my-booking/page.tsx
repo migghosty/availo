@@ -69,7 +69,7 @@ export default async function MyBookingPage({
       <PhoneLookupForm defaultValue={submitted} />
 
       {invalidFormat && (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-8 text-center">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-8 text-center">
           <p className="text-gray-600 dark:text-slate-300 font-medium">
             That doesn&apos;t look like a phone number.
           </p>
@@ -81,7 +81,7 @@ export default async function MyBookingPage({
 
       {bookings !== null && (
         bookings.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-8 text-center">
+          <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-8 text-center">
             <p className="text-gray-600 dark:text-slate-300 font-medium">No upcoming bookings found.</p>
             <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">
               No reservations were found for{" "}
@@ -93,7 +93,7 @@ export default async function MyBookingPage({
             </p>
             <Link
               href="/slots"
-              className="inline-block mt-4 text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 text-sm font-medium"
+              className="inline-block mt-4 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
             >
               Book an appointment →
             </Link>
@@ -110,7 +110,7 @@ export default async function MyBookingPage({
               return (
                 <div
                   key={group.legs[0].id}
-                  className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6"
+                  className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-6"
                 >
                   <dl className="space-y-3 text-sm">
                     <div className="flex justify-between gap-3">
@@ -164,7 +164,7 @@ export default async function MyBookingPage({
                   </dl>
 
                   {isGroup && (
-                    <ol className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-800 space-y-2 text-sm">
+                    <ol className="mt-4 pt-4 border-t border-gray-100 dark:border-blue-500/15 space-y-2 text-sm">
                       {group.legs.map((leg) => (
                         <li key={leg.id} className="flex items-center justify-between gap-3">
                           <span className="font-medium text-slate-700 dark:text-slate-200 flex-none tabular-nums">
@@ -181,11 +181,11 @@ export default async function MyBookingPage({
                     </ol>
                   )}
 
-                  <div className="mt-5 pt-4 border-t border-gray-100 dark:border-slate-800">
+                  <div className="mt-5 pt-4 border-t border-gray-100 dark:border-blue-500/15">
                     <AddToCalendar bookings={group.legs} />
                   </div>
 
-                  <div className="mt-5 pt-4 border-t border-gray-100 dark:border-slate-800">
+                  <div className="mt-5 pt-4 border-t border-gray-100 dark:border-blue-500/15">
                     <Link
                       href={`/cancel/${group.cancelToken}`}
                       className="inline-block text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium transition-colors"

@@ -50,7 +50,7 @@ export function ChangePasswordForm() {
           value={currentPassword}
           onChange={(e) => { setCurrentPassword(e.target.value); setSaved(false); }}
           required
-          className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+          className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
@@ -64,7 +64,7 @@ export function ChangePasswordForm() {
           onChange={(e) => { setNewPassword(e.target.value); setSaved(false); }}
           required
           minLength={8}
-          className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+          className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">At least 8 characters.</p>
       </div>
@@ -79,14 +79,14 @@ export function ChangePasswordForm() {
           onChange={(e) => { setConfirmPassword(e.target.value); setSaved(false); }}
           required
           minLength={8}
-          className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+          className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
       <button
         type="submit"
         disabled={saving}
-        className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-6 py-2 rounded-lg transition-colors disabled:opacity-60"
+        className="bg-blue-600 dark:shadow-glow hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg transition-colors disabled:opacity-60"
       >
         {saving ? "Saving…" : "Change password"}
       </button>

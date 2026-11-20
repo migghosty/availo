@@ -21,11 +21,11 @@ export function PhoneLookupForm({ defaultValue }: { defaultValue: string }) {
         name="phone"
         defaultValue={defaultValue}
         required
-        className="flex-1 min-w-0 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+        className="flex-1 min-w-0 border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
       />
       <button
         type="submit"
-        className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap"
+        className="bg-blue-600 dark:shadow-glow hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap"
       >
         Look up
       </button>
