@@ -24,7 +24,17 @@ export default defineConfig({
         // Exercises createBooking against a real Postgres, because the part
         // most worth testing — Serializable conflict handling — does not exist
         // outside the database.
-        resolve: { alias },
+        //
+        // `next/cache` is swapped for a pass-through: `unstable_cache` only
+        // works inside a running Next server. See test/next-cache-stub.mts.
+        resolve: {
+          alias: {
+            ...alias,
+            "next/cache": fileURLToPath(
+              new URL("./test/next-cache-stub.mts", import.meta.url)
+            ),
+          },
+        },
         test: {
           name: "integration",
           environment: "node",
