@@ -64,13 +64,17 @@ export default async function BookSlotPage({
     services: servicesParam,
   });
   const isGroup = (ids?.length ?? 0) > 1;
-  const selection = ids ? await loadSelection(ids) : null;
+  // In parallel, as on /slots: the schedule doesn't depend on the service, and
+  // awaiting them in turn cost an extra database round trip per view.
+  const [selection, inputs] = await Promise.all([
+    ids ? loadSelection(ids) : null,
+    loadAvailabilityInputs(),
+  ]);
   if (!selection) redirect(isGroup ? "/group" : "/");
 
   // The block is checked as one appointment of the summed length — the same
   // call `createBooking` makes inside its transaction, so what this page offers
   // and what the server accepts cannot drift apart.
-  const inputs = await loadAvailabilityInputs();
   const bookable = isStartBookable({
     start,
     ...inputs,

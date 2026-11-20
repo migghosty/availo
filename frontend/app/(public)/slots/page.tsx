@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { MonthCalendar } from "@/components/MonthCalendar";
 import { SelectionChip } from "@/components/SelectionChip";
+import { SlotPicker, type SlotDay } from "@/components/SlotPicker";
 import { computeAvailability } from "@/lib/availability";
 import { loadAvailabilityInputs } from "@/lib/scheduleData";
 import { loadSelection } from "@/lib/selectionData";
@@ -11,11 +11,7 @@ import {
   totalDurationMinutes,
 } from "@/lib/selection";
 import { formatDuration } from "@/lib/service";
-import {
-  addMonthsToMonthKey,
-  formatMonthLabel,
-  monthKeyOf,
-} from "@/lib/schedule";
+import { monthKeyOf } from "@/lib/schedule";
 import { BUSINESS_TIMEZONE, todayInTimezone, addDaysToDateKey } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
@@ -23,27 +19,30 @@ export const dynamic = "force-dynamic";
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH_KEY = /^\d{4}-\d{2}$/;
 
-function formatDayHeading(dateKey: string) {
-  const today = todayInTimezone();
-  if (dateKey === today) return "Today";
-  if (dateKey === addDaysToDateKey(today, 1)) return "Tomorrow";
+const longDateFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: "UTC",
+  weekday: "long",
+  month: "long",
+  day: "numeric",
+});
 
+const timeFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: BUSINESS_TIMEZONE,
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+
+/** "2026-11-23" → "Monday, November 23", read as a calendar date, not an instant. */
+function formatLongDate(dateKey: string) {
   const [year, month, day] = dateKey.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: "UTC",
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  }).format(new Date(Date.UTC(year, month - 1, day, 12)));
+  return longDateFormat.format(new Date(Date.UTC(year, month - 1, day, 12)));
 }
 
-function formatTime(date: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: BUSINESS_TIMEZONE,
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(date);
+function formatDayHeading(dateKey: string, todayKey: string) {
+  if (dateKey === todayKey) return "Today";
+  if (dateKey === addDaysToDateKey(todayKey, 1)) return "Tomorrow";
+  return formatLongDate(dateKey);
 }
 
 export default async function SlotsPage({
@@ -72,7 +71,12 @@ export default async function SlotsPage({
     services: servicesParam,
   });
   const isGroup = (ids?.length ?? 0) > 1;
-  const selection = ids ? await loadSelection(ids) : null;
+  // In parallel: the schedule doesn't depend on the service, and running these
+  // back to back cost a whole extra database round trip on every page view.
+  const [selection, inputs] = await Promise.all([
+    ids ? loadSelection(ids) : null,
+    loadAvailabilityInputs(),
+  ]);
   if (!selection) redirect(isGroup ? "/group" : "/");
 
   // A group is one contiguous block, so its length is the sum: three 30-minute
@@ -80,18 +84,11 @@ export default async function SlotsPage({
   // concerned, and every overlap and closing-time rule follows from that alone.
   const durationMin = totalDurationMinutes(selection);
 
-  const inputs = await loadAvailabilityInputs();
   const days = computeAvailability({ ...inputs, durationMin });
 
   // Emits `service=5` for one id, so every URL below is byte-identical to what
   // this page produced before groups existed.
   const selectionQuery = serializeSelection(selection.map((s) => s.id));
-  const withSelection = (query: string) => `/slots?${selectionQuery}&${query}`;
-
-  // `computeAvailability` only returns days that actually have an open time, so
-  // membership in this map *is* the blue/gray split — no extra logic needed.
-  const startsByDate = new Map(days.map((day) => [day.dateKey, day.starts]));
-  const availableDates = new Set(startsByDate.keys());
 
   const todayKey = todayInTimezone();
   const horizonKey = addDaysToDateKey(todayKey, inputs.config.bookingHorizonDays);
@@ -118,10 +115,21 @@ export default async function SlotsPage({
       ? requestedDate
       : soonestInMonth?.dateKey;
 
-  const selectedStarts = selectedDate ? startsByDate.get(selectedDate) : undefined;
-
-  const prevMonth = addMonthsToMonthKey(visibleMonth, -1);
-  const nextMonth = addMonthsToMonthKey(visibleMonth, 1);
+  // The whole horizon goes to the client in one payload (a month of a busy
+  // schedule is ~1k start times, ~25 kB), so switching day or month never
+  // round-trips. `computeAvailability` only returns days that actually have an
+  // open time, so membership in this list *is* the blue/gray split.
+  const slotDays: SlotDay[] = days.map((day) => ({
+    dateKey: day.dateKey,
+    heading: formatDayHeading(day.dateKey, todayKey),
+    ariaLabel: `${formatLongDate(day.dateKey)} — ${day.starts.length} time${
+      day.starts.length === 1 ? "" : "s"
+    } available`,
+    starts: day.starts.map((start) => ({
+      ms: start.getTime(),
+      label: timeFormat.format(start),
+    })),
+  }));
 
   return (
     <div>
@@ -138,7 +146,7 @@ export default async function SlotsPage({
         <SelectionChip services={selection} />
       </div>
 
-      {availableDates.size === 0 ? (
+      {slotDays.length === 0 ? (
         <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-12 text-center">
           <p className="text-gray-500 dark:text-slate-400">
             No {formatDuration(durationMin)} openings right now.
@@ -155,60 +163,19 @@ export default async function SlotsPage({
           </Link>
         </div>
       ) : (
-        <div className="space-y-8">
-          {/* Card framing starts at sm:. On a phone the calendar sits directly on
-              the page so the full width goes to the day cells — the difference
-              between a 42px and a 46px tap target. */}
-          <div className="sm:bg-white sm:dark:bg-neutral-950 sm:rounded-xl sm:border sm:border-gray-200 sm:dark:border-blue-500/15 sm:p-5">
-            <MonthCalendar
-              monthKey={visibleMonth}
-              availableDates={availableDates}
-              selectedDate={selectedDate}
-              todayKey={todayKey}
-              hrefForDate={(dateKey) => withSelection(`date=${dateKey}`)}
-              prevHref={
-                prevMonth < firstMonth ? null : withSelection(`month=${prevMonth}`)
-              }
-              nextHref={
-                nextMonth > lastMonth ? null : withSelection(`month=${nextMonth}`)
-              }
-              countForDate={(dateKey) => startsByDate.get(dateKey)?.length}
-            />
-          </div>
-
-          <section>
-            {selectedDate && selectedStarts && selectedStarts.length > 0 ? (
-              <>
-                <h2 className="text-xs font-semibold text-gray-400 dark:text-slate-500 uppercase tracking-widest mb-3">
-                  {formatDayHeading(selectedDate)}
-                </h2>
-                {/* Time pills: dense grid so a long day stays scannable on a phone */}
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                  {selectedStarts.map((start) => (
-                    <Link
-                      key={start.getTime()}
-                      href={`/book/${start.getTime()}?${selectionQuery}`}
-                      className="bg-white dark:bg-neutral-950 rounded-lg border border-gray-200 dark:border-blue-500/15 px-2 py-3 text-center text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:shadow-sm transition-all"
-                    >
-                      {formatTime(start)}
-                    </Link>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-8 text-center">
-                <p className="text-gray-600 dark:text-slate-300 font-medium">
-                  {selectedDate
-                    ? "No times available on this day."
-                    : `No times available in ${formatMonthLabel(visibleMonth)}.`}
-                </p>
-                <p className="text-sm text-gray-400 dark:text-slate-500 mt-1">
-                  Pick another day from the calendar above.
-                </p>
-              </div>
-            )}
-          </section>
-        </div>
+        /* Keyed on what the server resolved, so a fresh server render (a
+           reload, or a new ?service=) resets the picker's local state rather
+           than keeping a day from the previous one. */
+        <SlotPicker
+          key={`${selectionQuery}|${visibleMonth}|${selectedDate ?? ""}`}
+          days={slotDays}
+          todayKey={todayKey}
+          firstMonth={firstMonth}
+          lastMonth={lastMonth}
+          initialMonth={visibleMonth}
+          initialDate={selectedDate}
+          selectionQuery={selectionQuery}
+        />
       )}
     </div>
   );
