@@ -128,6 +128,42 @@ export function parseHistoryFilter(value: unknown): HistoryFilter {
   return value === "cancelled" ? "cancelled" : "all";
 }
 
+/**
+ * How far back the page looks. The default keeps the common case — "what
+ * happened lately" — to a small, index-bounded scan instead of reading the
+ * table from the top until the page fills.
+ */
+export const HISTORY_RANGES = [
+  { value: "30d", label: "Past 30 days", days: 30 },
+  { value: "60d", label: "Past 60 days", days: 60 },
+  { value: "90d", label: "Past 90 days", days: 90 },
+  { value: "1y", label: "Past year", days: 365 },
+  { value: "2y", label: "Past 2 years", days: 730 },
+] as const;
+
+export type HistoryRange = (typeof HISTORY_RANGES)[number]["value"];
+
+export const DEFAULT_HISTORY_RANGE: HistoryRange = "30d";
+
+export function parseHistoryRange(value: unknown): HistoryRange {
+  const match = HISTORY_RANGES.find((range) => range.value === value);
+  return match ? match.value : DEFAULT_HISTORY_RANGE;
+}
+
+export function historyRangeLabel(range: HistoryRange): string {
+  return HISTORY_RANGES.find((r) => r.value === range)!.label;
+}
+
+/**
+ * The earliest instant a range includes. Counted in whole 24-hour days back
+ * from `now` rather than calendar days in the business timezone — the cutoff
+ * is a coarse window, and an hour either side of a DST change can't matter.
+ */
+export function historyRangeStart(range: HistoryRange, now: Date): Date {
+  const { days } = HISTORY_RANGES.find((r) => r.value === range)!;
+  return new Date(now.getTime() - days * 24 * 60 * 60_000);
+}
+
 export const HISTORY_PAGE_SIZE = 100;
 export const HISTORY_MAX_LIMIT = 2000;
 
@@ -146,7 +182,7 @@ export function parseHistoryLimit(value: unknown): number {
 
 /**
  * Every link the history page generates goes through here — the tabs, "Show
- * older" and "Clear" — so a search can't silently drop out of the URL when the
+ * older" and "Clear" — so a search or a timeframe can't silently drop out of the URL when the
  * admin switches tab, the way `?service=` would on `/slots` without
  * `withService()`.
  *
@@ -156,16 +192,19 @@ export function parseHistoryLimit(value: unknown): number {
  */
 export function historyHref({
   filter,
+  range = DEFAULT_HISTORY_RANGE,
   limit,
   phone,
 }: {
   filter: HistoryFilter;
+  range?: HistoryRange;
   limit?: number;
   phone?: string;
 }): string {
   const params = new URLSearchParams();
   if (phone) params.set("phone", phone);
   if (filter !== "all") params.set("filter", filter);
+  if (range !== DEFAULT_HISTORY_RANGE) params.set("range", range);
   if (limit && limit > HISTORY_PAGE_SIZE) params.set("limit", String(limit));
   const query = params.toString();
   return query ? `/admin/history?${query}` : "/admin/history";

@@ -1490,6 +1490,7 @@ describe("searching history by phone", () => {
 
     const { entries } = await loadBookingHistory({
       filter: "all",
+      range: "30d",
       limit: 100,
       phone: "+16191234567",
     });
@@ -1508,6 +1509,7 @@ describe("searching history by phone", () => {
 
     const { entries } = await loadBookingHistory({
       filter: "cancelled",
+      range: "30d",
       limit: 100,
       phone: "+16191234567",
     });
@@ -1527,7 +1529,80 @@ describe("searching history by phone", () => {
     if (!party.ok) return;
     await cancelBooking({ cancelToken: party.cancelToken }, "admin");
 
-    expect(await loadPhoneSummary("+16191234567")).toEqual({ bookings: 2, cancelled: 1 });
-    expect(await loadPhoneSummary("+18585550199")).toEqual({ bookings: 0, cancelled: 0 });
+    expect(await loadPhoneSummary("+16191234567", "30d")).toEqual({ bookings: 2, cancelled: 1 });
+    expect(await loadPhoneSummary("+18585550199", "30d")).toEqual({ bookings: 0, cancelled: 0 });
+  });
+});
+
+describe("history timeframe", () => {
+  const DAY = 24 * 60 * 60_000;
+  const now = new Date();
+  const daysAgo = (days: number) => new Date(now.getTime() - days * DAY);
+
+  // Written straight into the table: `createBooking` always stamps `bookedAt`
+  // as now, and this is about rows from weeks ago.
+  async function record(
+    cancelToken: string,
+    stamps: { bookedAt: Date; cancelledAt?: Date }
+  ) {
+    await db.bookingHistory.create({
+      data: {
+        cancelToken,
+        startTime: stamps.bookedAt,
+        durationMinutes: 30,
+        clientName: "Ada Lovelace",
+        clientPhone: "+16191234567",
+        serviceName: "Haircut",
+        servicePriceCents: 2500,
+        bookedAt: stamps.bookedAt,
+        cancelledAt: stamps.cancelledAt ?? null,
+        cancelledBy: stamps.cancelledAt ? "client" : null,
+      },
+    });
+  }
+
+  it("shows only what was booked inside the window", async () => {
+    await record("recent", { bookedAt: daysAgo(5) });
+    await record("older", { bookedAt: daysAgo(45) });
+    await record("ancient", { bookedAt: daysAgo(400) });
+
+    const count = async (range: "30d" | "60d" | "1y" | "2y") =>
+      (await loadBookingHistory({ filter: "all", range, limit: 100, now })).entries.length;
+
+    expect(await count("30d")).toBe(1);
+    expect(await count("60d")).toBe(2);
+    expect(await count("1y")).toBe(2);
+    expect(await count("2y")).toBe(3);
+  });
+
+  it("windows the Cancelled tab by when it was cancelled, not when it was booked", async () => {
+    // Booked long ago, cancelled this week: a fresh cancellation the admin
+    // needs to see on the default view.
+    await record("late-cancel", { bookedAt: daysAgo(50), cancelledAt: daysAgo(2) });
+    await record("old-cancel", { bookedAt: daysAgo(50), cancelledAt: daysAgo(40) });
+
+    const { entries } = await loadBookingHistory({
+      filter: "cancelled",
+      range: "30d",
+      limit: 100,
+      now,
+    });
+    expect(entries).toHaveLength(1);
+    expect(entries[0].cancelledAt).toEqual(daysAgo(2));
+  });
+
+  it("scopes the phone summary the same way each tab is", async () => {
+    await record("recent", { bookedAt: daysAgo(5) });
+    await record("late-cancel", { bookedAt: daysAgo(50), cancelledAt: daysAgo(2) });
+    await record("ancient", { bookedAt: daysAgo(400) });
+
+    expect(await loadPhoneSummary("+16191234567", "30d", now)).toEqual({
+      bookings: 1,
+      cancelled: 1,
+    });
+    expect(await loadPhoneSummary("+16191234567", "2y", now)).toEqual({
+      bookings: 3,
+      cancelled: 1,
+    });
   });
 });

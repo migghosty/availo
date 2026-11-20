@@ -1,12 +1,15 @@
 import Link from "next/link";
+import { HistoryRangeSelect } from "@/components/HistoryRangeSelect";
 import { HistorySearchForm } from "@/components/HistorySearchForm";
 import { loadBookingHistory, loadPhoneSummary } from "@/lib/bookingHistoryData";
 import {
   HISTORY_MAX_LIMIT,
   HISTORY_PAGE_SIZE,
   historyHref,
+  historyRangeLabel,
   parseHistoryFilter,
   parseHistoryLimit,
+  parseHistoryRange,
   type HistoryEntry,
   type HistoryFilter,
   type HistoryStatus,
@@ -134,10 +137,16 @@ function EntryCard({ entry }: { entry: HistoryEntry }) {
 export default async function HistoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string; limit?: string; phone?: string }>;
+  searchParams: Promise<{
+    filter?: string;
+    range?: string;
+    limit?: string;
+    phone?: string;
+  }>;
 }) {
   const params = await searchParams;
   const filter = parseHistoryFilter(params.filter);
+  const range = parseHistoryRange(params.range);
   const limit = parseHistoryLimit(params.limit);
 
   // What the admin typed, kept for the URL and the search box; the normalized
@@ -152,8 +161,8 @@ export default async function HistoryPage({
   const [{ entries, hasMore }, summary] = invalidPhone
     ? [{ entries: [], hasMore: false }, null]
     : await Promise.all([
-        loadBookingHistory({ filter, limit, phone: searchPhone }),
-        searchPhone ? loadPhoneSummary(searchPhone) : Promise.resolve(null),
+        loadBookingHistory({ filter, range, limit, phone: searchPhone }),
+        searchPhone ? loadPhoneSummary(searchPhone, range) : Promise.resolve(null),
       ]);
 
   const linkPhone = typedPhone || undefined;
@@ -178,7 +187,8 @@ export default async function HistoryPage({
         key={typedPhone}
         defaultValue={typedPhone}
         filter={filter}
-        clearHref={typedPhone ? historyHref({ filter }) : null}
+        range={range}
+        clearHref={typedPhone ? historyHref({ filter, range }) : null}
       />
 
       {invalidPhone && (
@@ -194,36 +204,38 @@ export default async function HistoryPage({
           <span className="text-gray-500 dark:text-slate-400">
             {" "}
             · {summary.bookings} booking{summary.bookings === 1 ? "" : "s"},{" "}
-            {summary.cancelled} cancelled
+            {summary.cancelled} cancelled · {historyRangeLabel(range).toLowerCase()}
           </span>
         </p>
       )}
 
-      <div className="inline-flex rounded-lg bg-gray-100 dark:bg-neutral-900 p-1 mb-5">
-        {tabs.map((tab) => (
-          <Link
-            key={tab.filter}
-            href={historyHref({ filter: tab.filter, phone: linkPhone })}
-            className={`text-sm px-4 py-1.5 rounded-md transition-colors ${
-              tab.filter === filter
-                ? "bg-white dark:bg-neutral-950 text-slate-800 dark:text-slate-100 shadow-sm font-medium"
-                : "text-gray-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        ))}
+      {/* Tabs and timeframe share a row; at phone width there's room for both,
+          and flex-wrap drops the dropdown underneath if a font size says no. */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div className="inline-flex rounded-lg bg-gray-100 dark:bg-neutral-900 p-1">
+          {tabs.map((tab) => (
+            <Link
+              key={tab.filter}
+              href={historyHref({ filter: tab.filter, range, phone: linkPhone })}
+              className={`text-sm px-4 py-1.5 rounded-md transition-colors ${
+                tab.filter === filter
+                  ? "bg-white dark:bg-neutral-950 text-slate-800 dark:text-slate-100 shadow-sm font-medium"
+                  : "text-gray-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              }`}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </div>
+        <HistoryRangeSelect range={range} filter={filter} phone={linkPhone} />
       </div>
 
       {invalidPhone ? null : entries.length === 0 ? (
         <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-4 text-sm text-gray-400 dark:text-slate-500">
-          {searchPhone
-            ? filter === "cancelled"
-              ? "No cancellations for this number."
-              : "No bookings for this number."
-            : filter === "cancelled"
-              ? "No cancellations yet."
-              : "No bookings yet."}
+          {/* Name the window: "no bookings" alone would read as "never". */}
+          {filter === "cancelled" ? "No cancellations" : "No bookings"}
+          {searchPhone ? " for this number" : ""} in the{" "}
+          {historyRangeLabel(range).toLowerCase()}.
         </div>
       ) : (
         <ul className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 divide-y divide-gray-100 dark:divide-blue-500/10">
@@ -236,7 +248,7 @@ export default async function HistoryPage({
       {hasMore && limit < HISTORY_MAX_LIMIT && (
         <div className="mt-5 text-center">
           <Link
-            href={historyHref({ filter, limit: nextLimit, phone: linkPhone })}
+            href={historyHref({ filter, range, limit: nextLimit, phone: linkPhone })}
             scroll={false}
             className="inline-block text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 px-4 py-2"
           >

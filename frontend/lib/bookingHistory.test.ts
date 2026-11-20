@@ -3,10 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   HISTORY_MAX_LIMIT,
   HISTORY_PAGE_SIZE,
+  DEFAULT_HISTORY_RANGE,
+  HISTORY_RANGES,
   historyHref,
+  historyRangeStart,
   historyStatus,
   parseHistoryFilter,
   parseHistoryLimit,
+  parseHistoryRange,
   toHistoryEntries,
   type HistoryRow,
 } from "./bookingHistory";
@@ -168,6 +172,27 @@ describe("parseHistoryLimit", () => {
   });
 });
 
+describe("parseHistoryRange", () => {
+  it("accepts each offered range and defaults everything else to 30 days", () => {
+    for (const range of HISTORY_RANGES) {
+      expect(parseHistoryRange(range.value)).toBe(range.value);
+    }
+    expect(DEFAULT_HISTORY_RANGE).toBe("30d");
+    expect(parseHistoryRange(undefined)).toBe("30d");
+    expect(parseHistoryRange("all")).toBe("30d");
+    expect(parseHistoryRange("10y")).toBe("30d");
+  });
+});
+
+describe("historyRangeStart", () => {
+  it("counts whole days back from now", () => {
+    const day = 24 * 60 * MIN;
+    expect(historyRangeStart("30d", now)).toEqual(new Date(now.getTime() - 30 * day));
+    expect(historyRangeStart("1y", now)).toEqual(new Date(now.getTime() - 365 * day));
+    expect(historyRangeStart("2y", now)).toEqual(new Date(now.getTime() - 730 * day));
+  });
+});
+
 describe("historyHref", () => {
   it("is the bare path with nothing set", () => {
     expect(historyHref({ filter: "all" })).toBe("/admin/history");
@@ -184,5 +209,12 @@ describe("historyHref", () => {
 
   it("leaves out a limit that is just the default page", () => {
     expect(historyHref({ filter: "all", limit: HISTORY_PAGE_SIZE })).toBe("/admin/history");
+  });
+
+  it("carries a non-default range through every link, and omits the default", () => {
+    expect(historyHref({ filter: "all", range: "30d" })).toBe("/admin/history");
+    expect(
+      historyHref({ filter: "cancelled", range: "1y", phone: "6191234567" })
+    ).toBe("/admin/history?phone=6191234567&filter=cancelled&range=1y");
   });
 });
