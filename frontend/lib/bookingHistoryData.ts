@@ -5,18 +5,22 @@
 import { db } from "./db";
 import type { Prisma } from "@/app/generated/prisma/client";
 import {
+  historyRangeStart,
   toHistoryEntries,
   type HistoryEntry,
   type HistoryFilter,
+  type HistoryRange,
 } from "./bookingHistory";
 
 export async function loadBookingHistory({
   filter,
+  range,
   limit,
   phone = null,
   now = new Date(),
 }: {
   filter: HistoryFilter;
+  range: HistoryRange;
   /** Rows, not entries — a party of three is three. */
   limit: number;
   /**
@@ -27,9 +31,16 @@ export async function loadBookingHistory({
   phone?: string | null;
   now?: Date;
 }): Promise<{ entries: HistoryEntry[]; hasMore: boolean }> {
+  // The timeframe bounds the same column the list is ordered by — when it was
+  // booked, or when it was cancelled — so "past 30 days" on the Cancelled tab
+  // means cancellations made in the last 30 days, and both are one range scan
+  // on an existing index (`bookedAt` / `cancelledAt`).
+  const since = historyRangeStart(range, now);
   const where: Prisma.BookingHistoryWhereInput = {
     ...(phone ? { clientPhone: phone } : {}),
-    ...(filter === "cancelled" ? { cancelledAt: { not: null } } : {}),
+    ...(filter === "cancelled"
+      ? { cancelledAt: { gte: since } }
+      : { bookedAt: { gte: since } }),
   };
 
   // "Cancelled" orders by when it was cancelled, so a client who cancels an
@@ -71,21 +82,37 @@ export async function loadBookingHistory({
  * the client did.
  */
 export async function loadPhoneSummary(
-  phone: string
+  phone: string,
+  range: HistoryRange,
+  now: Date = new Date()
 ): Promise<{ bookings: number; cancelled: number }> {
+  // Scoped to the timeframe the same way each tab is: bookings by when they
+  // were booked, cancellations by when they were cancelled. So each count
+  // matches what its tab lists, including an old booking cancelled recently.
+  const since = historyRangeStart(range, now);
   const rows = await db.bookingHistory.findMany({
-    where: { clientPhone: phone },
-    select: { id: true, groupId: true, cancelledAt: true },
+    where: {
+      clientPhone: phone,
+      OR: [{ bookedAt: { gte: since } }, { cancelledAt: { gte: since } }],
+    },
+    select: { id: true, groupId: true, bookedAt: true, cancelledAt: true },
   });
 
-  const entries = new Map<string, boolean>();
+  const entries = new Map<string, { booked: boolean; cancelled: boolean }>();
   for (const row of rows) {
     const key = row.groupId ?? `solo-${row.id}`;
-    entries.set(key, (entries.get(key) ?? false) || row.cancelledAt !== null);
+    const entry = entries.get(key) ?? { booked: false, cancelled: false };
+    if (row.bookedAt >= since) entry.booked = true;
+    if (row.cancelledAt && row.cancelledAt >= since) entry.cancelled = true;
+    entries.set(key, entry);
   }
 
+  let bookings = 0;
   let cancelled = 0;
-  for (const isCancelled of entries.values()) if (isCancelled) cancelled++;
+  for (const entry of entries.values()) {
+    if (entry.booked) bookings++;
+    if (entry.cancelled) cancelled++;
+  }
 
-  return { bookings: entries.size, cancelled };
+  return { bookings, cancelled };
 }

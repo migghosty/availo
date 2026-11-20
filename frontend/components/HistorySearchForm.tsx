@@ -3,7 +3,11 @@
 import Link from "next/link";
 
 import { PhoneField } from "./PhoneField";
-import type { HistoryFilter } from "@/lib/bookingHistory";
+import {
+  DEFAULT_HISTORY_RANGE,
+  type HistoryFilter,
+  type HistoryRange,
+} from "@/lib/bookingHistory";
 
 /**
  * The phone search on `/admin/history`.
@@ -11,16 +15,18 @@ import type { HistoryFilter } from "@/lib/bookingHistory";
  * Same shape as `PhoneLookupForm`: a client component only so the number
  * formats as it's typed, submitting as a plain `method="GET"` form so the
  * results stay server-rendered and the search lives in the URL. The current
- * tab rides along in a hidden field, so searching from "Cancelled" stays on
- * "Cancelled".
+ * tab and timeframe ride along in hidden fields, so searching from
+ * "Cancelled · Past year" stays there.
  */
 export function HistorySearchForm({
   defaultValue,
   filter,
+  range,
   clearHref,
 }: {
   defaultValue: string;
   filter: HistoryFilter;
+  range: HistoryRange;
   /** Shown only while a search is active. */
   clearHref: string | null;
 }) {
@@ -34,6 +40,9 @@ export function HistorySearchForm({
       </label>
       <div className="flex gap-2">
         {filter !== "all" && <input type="hidden" name="filter" value={filter} />}
+        {range !== DEFAULT_HISTORY_RANGE && (
+          <input type="hidden" name="range" value={range} />
+        )}
         <PhoneField
           id="history-phone"
           name="phone"
