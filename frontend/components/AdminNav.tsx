@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const NAV_ITEMS = [
   { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/schedule", label: "Schedule" },
+  { href: "/admin/history", label: "History" },
   { href: "/admin/services", label: "Services" },
   { href: "/admin/settings", label: "Settings" },
 ];
@@ -41,7 +42,7 @@ export function AdminNav() {
         </div>
 
         {/* Nav links: even grid on phones so nothing gets cut off, inline pills from sm: up */}
-        <div className="grid grid-cols-4 gap-1 pb-2 sm:flex sm:gap-1 sm:pb-3 sm:-mt-1">
+        <div className="grid grid-cols-5 gap-1 pb-2 sm:flex sm:gap-1 sm:pb-3 sm:-mt-1">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
