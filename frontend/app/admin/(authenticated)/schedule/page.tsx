@@ -32,7 +32,7 @@ export default async function SchedulePage() {
             it runs depends on the service they pick, set on the{" "}
             <Link
               href="/admin/services"
-              className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 font-medium"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
             >
               Services
             </Link>{" "}

@@ -53,7 +53,7 @@ export function CreateServiceForm() {
             onChange={(e) => setEmoji(e.target.value)}
             placeholder="✂️"
             maxLength={8}
-            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="flex-1 sm:min-w-[8rem]">
@@ -65,7 +65,7 @@ export function CreateServiceForm() {
             placeholder="Haircut"
             required
             maxLength={60}
-            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="sm:w-28">
@@ -78,7 +78,7 @@ export function CreateServiceForm() {
             min="0"
             step="0.01"
             required
-            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         {/* A native select beats six pills here: it's one tap on a phone, and
@@ -94,7 +94,7 @@ export function CreateServiceForm() {
             id="new-service-duration"
             value={durationMinutes}
             onChange={(e) => setDurationMinutes(Number(e.target.value))}
-            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {DURATION_OPTIONS.map((option) => (
               <option key={option} value={option}>
@@ -108,7 +108,7 @@ export function CreateServiceForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-6 py-2 rounded-lg transition-colors disabled:opacity-60"
+        className="bg-blue-600 dark:shadow-glow hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg transition-colors disabled:opacity-60"
       >
         {submitting ? "Adding…" : "Add Service"}
       </button>

@@ -236,11 +236,11 @@ export function PushToggle({
 
   const note = "text-sm text-gray-600 dark:text-slate-400";
   const primaryButton =
-    "w-full rounded-lg bg-amber-600 px-4 py-3 text-sm font-semibold text-white " +
-    "hover:bg-amber-700 disabled:opacity-50 transition-colors";
+    "w-full rounded-lg bg-blue-600 dark:shadow-glow px-4 py-3 text-sm font-semibold text-white " +
+    "hover:bg-blue-700 disabled:opacity-50 transition-colors";
   const secondaryButton =
-    "w-full rounded-lg border border-gray-300 dark:border-slate-700 px-4 py-3 text-sm " +
-    "font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 " +
+    "w-full rounded-lg border border-gray-300 dark:border-neutral-700 px-4 py-3 text-sm " +
+    "font-medium text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-neutral-900 " +
     "disabled:opacity-50 transition-colors";
 
   if (status === "loading") {
@@ -296,7 +296,7 @@ export function PushToggle({
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <span
-          className={`h-2 w-2 rounded-full ${status === "on" ? "bg-green-500" : "bg-gray-300 dark:bg-slate-600"}`}
+          className={`h-2 w-2 rounded-full ${status === "on" ? "bg-green-500" : "bg-gray-300 dark:bg-neutral-600"}`}
           aria-hidden
         />
         <p className="text-sm font-medium text-slate-800 dark:text-slate-100">

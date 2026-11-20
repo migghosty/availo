@@ -32,7 +32,7 @@ export function SelectionChip({
   const emoji = [...new Set(services.map((s) => s.emoji).filter(Boolean))];
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 px-4 py-3">
+    <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 px-4 py-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-2xl flex-none" aria-hidden>
@@ -51,7 +51,7 @@ export function SelectionChip({
         {/* p-2 -m-2 keeps a comfortable hit area behind small text */}
         <Link
           href="/group"
-          className="flex-none text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 p-2 -m-2"
+          className="flex-none text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-2 -m-2"
         >
           Change
         </Link>
@@ -60,7 +60,7 @@ export function SelectionChip({
           chip says "3 people" and the client has no way to check they picked
           the right services short of going back. */}
       {showBreakdown && (
-      <ol className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-800 space-y-1">
+      <ol className="mt-3 pt-3 border-t border-gray-100 dark:border-blue-500/15 space-y-1">
         {services.map((service, index) => (
           <li
             key={index}

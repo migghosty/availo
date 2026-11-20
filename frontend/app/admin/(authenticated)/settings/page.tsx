@@ -25,7 +25,7 @@ export default async function SettingsPage() {
           </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-6">
           <SettingsForm current={{ ...config, address, adminPhone, businessName }} />
         </div>
       </div>
@@ -40,7 +40,7 @@ export default async function SettingsPage() {
           </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-6">
           {/*
             The key has to come from the server: PushToggle is a client
             component and can't read env vars, and a NEXT_PUBLIC_* one would be
@@ -59,7 +59,7 @@ export default async function SettingsPage() {
           </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-6">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-6">
           <ChangePasswordForm />
         </div>
       </div>

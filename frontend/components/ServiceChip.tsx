@@ -17,7 +17,7 @@ export function ServiceChip({
   changeLabel?: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 px-4 py-3">
+    <div className="flex items-center justify-between gap-3 bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 px-4 py-3">
       <div className="flex items-center gap-3 min-w-0">
         <span className="text-2xl flex-none" aria-hidden>
           {service.emoji}
@@ -35,7 +35,7 @@ export function ServiceChip({
       {/* p-2 -m-2 keeps a comfortable hit area behind small text */}
       <Link
         href={changeHref}
-        className="flex-none text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 p-2 -m-2"
+        className="flex-none text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-2 -m-2"
       >
         {changeLabel}
       </Link>

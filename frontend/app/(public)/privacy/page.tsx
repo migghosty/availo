@@ -74,7 +74,7 @@ export default async function PrivacyPage() {
           Messaging is covered separately, including how to stop them — see our{" "}
           <Link
             href="/sms-terms"
-            className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 underline"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
           >
             SMS Terms
           </Link>

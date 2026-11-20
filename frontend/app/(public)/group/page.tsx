@@ -48,7 +48,7 @@ export default async function GroupPage({
       </div>
 
       {services.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-8 text-center">
+        <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 p-8 text-center">
           <p className="text-gray-500 dark:text-slate-400">
             No services available right now. Check back soon!
           </p>
@@ -69,8 +69,8 @@ export default async function GroupPage({
                     aria-current={isSelected ? "true" : undefined}
                     className={
                       isSelected
-                        ? "rounded-lg border border-amber-500 bg-amber-500 py-3 text-center text-sm font-semibold text-white transition-colors"
-                        : "rounded-lg border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-3 text-center text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-amber-400 dark:hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                        ? "rounded-lg border border-blue-600 bg-blue-600 dark:shadow-glow py-3 text-center text-sm font-semibold text-white transition-colors"
+                        : "rounded-lg border border-gray-200 dark:border-blue-500/15 bg-white dark:bg-neutral-950 py-3 text-center text-sm font-medium text-slate-700 dark:text-slate-200 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                     }
                   >
                     {option}
@@ -105,7 +105,7 @@ export default async function GroupPage({
           <p className="text-center">
             <Link
               href="/"
-              className="text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 p-2 -m-2"
+              className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-2 -m-2"
             >
               Booking for just yourself? →
             </Link>

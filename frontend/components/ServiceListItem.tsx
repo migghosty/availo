@@ -86,7 +86,7 @@ export function ServiceListItem({ service }: { service: Service }) {
     return (
       <form
         onSubmit={handleSave}
-        className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 px-5 py-4 sm:px-6 bg-amber-50/50 dark:bg-amber-500/10"
+        className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 px-5 py-4 sm:px-6 bg-blue-50/50 dark:bg-blue-500/10"
       >
         <div className="sm:w-16">
           <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Icon</label>
@@ -95,7 +95,7 @@ export function ServiceListItem({ service }: { service: Service }) {
             value={emoji}
             onChange={(e) => setEmoji(e.target.value)}
             maxLength={8}
-            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="flex-1 sm:min-w-[8rem]">
@@ -106,7 +106,7 @@ export function ServiceListItem({ service }: { service: Service }) {
             onChange={(e) => setName(e.target.value)}
             required
             maxLength={60}
-            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="sm:w-28">
@@ -118,7 +118,7 @@ export function ServiceListItem({ service }: { service: Service }) {
             min="0"
             step="0.01"
             required
-            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="sm:w-32">
@@ -126,7 +126,7 @@ export function ServiceListItem({ service }: { service: Service }) {
           <select
             value={durationMinutes}
             onChange={(e) => setDurationMinutes(Number(e.target.value))}
-            className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2.5 sm:py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {/* A service edited to a length outside the presets keeps it */}
             {[...new Set([...DURATION_OPTIONS, durationMinutes])]
@@ -142,7 +142,7 @@ export function ServiceListItem({ service }: { service: Service }) {
           <button
             type="submit"
             disabled={saving}
-            className="flex-1 sm:flex-none bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-2.5 sm:py-2 rounded-lg transition-colors disabled:opacity-60"
+            className="flex-1 sm:flex-none bg-blue-600 dark:shadow-glow hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 sm:py-2 rounded-lg transition-colors disabled:opacity-60"
           >
             {saving ? "Saving…" : "Save"}
           </button>
@@ -200,7 +200,7 @@ export function ServiceListItem({ service }: { service: Service }) {
             <button
               onClick={() => setActive(true)}
               disabled={busy}
-              className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 disabled:opacity-50 transition-colors p-2 -m-2"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 disabled:opacity-50 transition-colors p-2 -m-2"
             >
               Restore
             </button>

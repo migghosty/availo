@@ -64,6 +64,47 @@ model Booking {
   @@index([groupId])
 }
 
+/// The admin's permanent record of every appointment ever booked, including the
+/// ones later cancelled. One row per `Booking` leg, written in the same
+/// transaction that creates it.
+///
+/// Exists because cancelling *deletes* the `Booking` — that is what frees the
+/// time, since availability is computed from whatever rows remain. A
+/// `cancelledAt` flag on `Booking` itself would mean every availability query,
+/// the @unique startTime index and every client page had to learn to ignore
+/// cancelled rows; one missed filter would block a freed time forever. So the
+/// live table stays "appointments that exist" and this one is history.
+///
+/// Deliberately **no foreign keys**. A FK to `Booking` could not survive the
+/// delete it is meant to outlive, and one to `Service` would block deleting a
+/// service whose bookings were all cancelled. Everything shown is a snapshot,
+/// exactly like `Booking.serviceName`.
+model BookingHistory {
+  id                Int       @id @default(autoincrement())
+  /// The `Booking.cancelToken` of the row this records — the join key while
+  /// the booking still exists, and how cancellation finds the rows to mark.
+  cancelToken       String    @unique
+  /// Copied from `Booking.groupId`, so a party of three reads as one entry.
+  groupId           String?
+  startTime         DateTime
+  durationMinutes   Int
+  clientName        String
+  clientPhone       String
+  serviceName       String
+  servicePriceCents Int
+  bookedAt          DateTime  @default(now())
+  /// Null while the appointment stands (upcoming or already happened).
+  cancelledAt       DateTime?
+  /// "client" | "admin". Null when not cancelled.
+  cancelledBy       String?
+
+  @@index([bookedAt])
+  @@index([cancelledAt])
+  @@index([groupId])
+  /// The admin's search-by-phone on /admin/history. Exact match on E.164.
+  @@index([clientPhone])
+}
+
 model Settings {
   id                 Int    @id @default(1)
   /// Granularity of offered start times (e.g. 15 => 4:00, 4:15, 4:30 …).

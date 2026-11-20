@@ -12,8 +12,8 @@ export default async function LoginPage() {
   const businessName = await getBusinessName();
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-slate-950 flex items-center justify-center px-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-md p-8 w-full max-w-sm relative">
+    <div className="min-h-screen page-glow bg-gray-100 dark:bg-black flex items-center justify-center px-4">
+      <div className="bg-white dark:bg-neutral-950 rounded-2xl shadow-md p-8 w-full max-w-sm relative">
         <ThemeToggle variant="surface" className="absolute top-4 right-4" />
 
         <div className="text-center mb-7">

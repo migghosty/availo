@@ -18,6 +18,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 
 import { createBooking, createGroupBooking } from "./booking";
 import { cancelBooking } from "./cancellation";
+import { loadBookingHistory, loadPhoneSummary } from "./bookingHistoryData";
 import { db } from "./db";
 import { instantForDateMinute } from "./availability";
 import { addDaysToDateKey, todayInTimezone } from "./timezone";
@@ -57,6 +58,7 @@ beforeAll(async () => {
   await db.settings.deleteMany();
   // Bookings first: the serviceId FK is ON DELETE RESTRICT.
   await db.booking.deleteMany();
+  await db.bookingHistory.deleteMany();
   await db.service.deleteMany();
 
   await db.settings.create({
@@ -100,10 +102,12 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await db.booking.deleteMany();
+  await db.bookingHistory.deleteMany();
 });
 
 afterAll(async () => {
   await db.booking.deleteMany();
+  await db.bookingHistory.deleteMany();
   await db.service.deleteMany();
   await db.$disconnect();
 });
@@ -1348,5 +1352,182 @@ describe("one message per group", () => {
     expect(bodies.find((b) => b.startsWith("+16195550000|"))).toContain(
       "3 appointments"
     );
+  });
+});
+
+describe("booking history", () => {
+  it("records a booking as it is made, snapshotting what was booked", async () => {
+    const created = await createBooking({ start: at430pm, serviceId: haircut, ...client });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const history = await db.bookingHistory.findMany();
+    expect(history).toHaveLength(1);
+    expect(history[0]).toMatchObject({
+      cancelToken: created.cancelToken,
+      startTime: at430pm,
+      durationMinutes: 30,
+      serviceName: "Haircut",
+      servicePriceCents: 2500,
+      clientName: "Ada Lovelace",
+      clientPhone: "+16191234567",
+      groupId: null,
+      cancelledAt: null,
+      cancelledBy: null,
+    });
+  });
+
+  it("writes nothing when the booking is refused", async () => {
+    await createBooking({ start: at430pm, serviceId: haircut, ...client });
+    // Overlaps the 4:30 booking.
+    const refused = await createBooking({ start: at415pm, serviceId: haircut, ...client });
+
+    expect(refused.ok).toBe(false);
+    expect(await db.bookingHistory.count()).toBe(1);
+  });
+
+  it("writes exactly one history row per winner under contention", async () => {
+    // The losing transaction is rolled back and possibly retried; neither may
+    // leave a stray row behind.
+    const results = await Promise.all([
+      createBooking({ start: at430pm, serviceId: haircut, ...client }),
+      createBooking({ start: at415pm, serviceId: haircut, ...client }),
+    ]);
+
+    expect(results.filter((result) => result.ok)).toHaveLength(1);
+    expect(await db.bookingHistory.count()).toBe(1);
+    expect(await db.booking.count()).toBe(1);
+  });
+
+  it("keeps the record after the client cancels, marked with who and when", async () => {
+    const created = await createBooking({ start: at430pm, serviceId: haircut, ...client });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const before = Date.now();
+    await cancelBooking({ cancelToken: created.cancelToken }, "client");
+
+    expect(await db.booking.count()).toBe(0);
+    const [entry] = await db.bookingHistory.findMany();
+    expect(entry.cancelledBy).toBe("client");
+    expect(entry.cancelledAt!.getTime()).toBeGreaterThanOrEqual(before - 1000);
+  });
+
+  it("attributes an admin cancellation to the admin", async () => {
+    await createBooking({ start: at430pm, serviceId: haircut, ...client });
+    const row = await db.booking.findFirst();
+
+    await cancelBooking({ id: row!.id }, "admin");
+
+    const [entry] = await db.bookingHistory.findMany();
+    expect(entry.cancelledBy).toBe("admin");
+  });
+
+  it("records a group as one row per person, and cancels all of them", async () => {
+    const result = await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, eyebrows],
+      ...client,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const booked = await db.bookingHistory.findMany({ orderBy: { startTime: "asc" } });
+    expect(booked.map((row) => row.serviceName)).toEqual(["Haircut", "Eyebrows"]);
+    expect(new Set(booked.map((row) => row.groupId))).toEqual(new Set([result.groupId]));
+
+    await cancelBooking({ cancelToken: result.cancelToken }, "client");
+
+    const after = await db.bookingHistory.findMany();
+    expect(after).toHaveLength(2);
+    expect(after.every((row) => row.cancelledBy === "client")).toBe(true);
+  });
+
+  it("does not overwrite the first cancellation with a second attempt", async () => {
+    const created = await createBooking({ start: at430pm, serviceId: haircut, ...client });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await cancelBooking({ cancelToken: created.cancelToken }, "client");
+    const [first] = await db.bookingHistory.findMany();
+
+    const again = await cancelBooking({ cancelToken: created.cancelToken }, "client");
+    const [second] = await db.bookingHistory.findMany();
+
+    expect(again.ok).toBe(false);
+    expect(second.cancelledAt).toEqual(first.cancelledAt);
+  });
+
+  it("keeps both the cancelled booking and its rebooking of the same time", async () => {
+    const created = await createBooking({ start: at430pm, serviceId: haircut, ...client });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    await cancelBooking({ cancelToken: created.cancelToken }, "client");
+    const rebooked = await createBooking({ start: at430pm, serviceId: haircut, ...client });
+    expect(rebooked.ok).toBe(true);
+
+    const history = await db.bookingHistory.findMany({ orderBy: { id: "asc" } });
+    expect(history).toHaveLength(2);
+    expect(history[0].cancelledAt).not.toBeNull();
+    expect(history[1].cancelledAt).toBeNull();
+  });
+});
+
+describe("searching history by phone", () => {
+  const other = { ...client, clientName: "Grace Hopper", clientPhone: "858-555-0199" };
+
+  it("returns only that number's bookings, in any spelling it was booked under", async () => {
+    await createBooking({ start: at430pm, serviceId: haircut, ...client });
+    await createBooking({ start: at500pm, serviceId: haircut, ...other });
+    // Same person as `client`, typed differently — normalization makes it one.
+    await createBooking({
+      start: at400pm,
+      serviceId: eyebrows,
+      ...client,
+      clientPhone: "+1 619 123 4567",
+    });
+
+    const { entries } = await loadBookingHistory({
+      filter: "all",
+      limit: 100,
+      phone: "+16191234567",
+    });
+
+    expect(entries).toHaveLength(2);
+    expect(entries.every((entry) => entry.clientName === "Ada Lovelace")).toBe(true);
+  });
+
+  it("combines with the Cancelled tab", async () => {
+    const kept = await createBooking({ start: at430pm, serviceId: haircut, ...client });
+    const gone = await createBooking({ start: at500pm, serviceId: haircut, ...client });
+    await createBooking({ start: at400pm, serviceId: eyebrows, ...other });
+    expect(kept.ok && gone.ok).toBe(true);
+    if (!gone.ok) return;
+    await cancelBooking({ cancelToken: gone.cancelToken }, "client");
+
+    const { entries } = await loadBookingHistory({
+      filter: "cancelled",
+      limit: 100,
+      phone: "+16191234567",
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].startTime).toEqual(at500pm);
+  });
+
+  it("summarises in entries, so a cancelled party counts once", async () => {
+    const party = await createGroupBooking({
+      start: at530pm,
+      serviceIds: [haircut, haircut, haircut],
+      ...client,
+    });
+    await createBooking({ start: at400pm, serviceId: eyebrows, ...client });
+    expect(party.ok).toBe(true);
+    if (!party.ok) return;
+    await cancelBooking({ cancelToken: party.cancelToken }, "admin");
+
+    expect(await loadPhoneSummary("+16191234567")).toEqual({ bookings: 2, cancelled: 1 });
+    expect(await loadPhoneSummary("+18585550199")).toEqual({ bookings: 0, cancelled: 0 });
   });
 });

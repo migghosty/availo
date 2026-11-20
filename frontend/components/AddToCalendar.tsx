@@ -48,7 +48,7 @@ export async function AddToCalendar({ bookings }: { bookings: BookableEvent[] })
         <a
           href={`/api/bookings/calendar/${bookings[0].cancelToken}`}
           aria-label="Add to Apple Calendar or Outlook (downloads a calendar file)"
-          className="flex-1 text-center bg-amber-500 hover:bg-amber-600 border border-transparent text-white font-medium px-4 py-3 rounded-lg text-sm transition-colors"
+          className="flex-1 text-center bg-blue-600 dark:shadow-glow hover:bg-blue-700 border border-transparent text-white font-medium px-4 py-3 rounded-lg text-sm transition-colors"
         >
           Apple / Outlook
         </a>
@@ -57,7 +57,7 @@ export async function AddToCalendar({ bookings }: { bookings: BookableEvent[] })
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Add to Google Calendar (opens in a new tab)"
-          className="flex-1 text-center dark:bg-slate-800 border border-gray-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-amber-400 dark:hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 font-medium px-4 py-3 rounded-lg text-sm transition-colors"
+          className="flex-1 text-center dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 text-slate-700 dark:text-slate-200 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 font-medium px-4 py-3 rounded-lg text-sm transition-colors"
         >
           Google Calendar
         </a>

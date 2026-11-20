@@ -22,9 +22,7 @@ export const dynamic = "force-dynamic";
  * TODO: replace with the real bio. Blank lines start a new paragraph —
  * `whitespace-pre-line` preserves them, so no markup is needed.
  */
-const BIO = `I've been cutting hair for over ten years, and I still think a good cut is mostly listening. Tell me what you want, and if I think something else would suit you better, I'll say so before I pick up the clippers — not after.
-
-Fades, tapers, scissor work, beard shaping. Walk-ins are welcome when I have a gap, but booking ahead is the only way to be sure of a time.`;
+const BIO = `My name is Angel, and I'm one of the best young barber's in San Diego. Book an appointment here for your next cut.`;
 
 export default async function AboutPage() {
   const [businessName, address] = await Promise.all([
@@ -56,7 +54,7 @@ export default async function AboutPage() {
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 underline"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
             >
               Get directions
             </a>
@@ -72,7 +70,7 @@ export default async function AboutPage() {
             {GALLERY.map((photo) => (
               <div
                 key={photo.src}
-                className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-slate-800"
+                className="relative aspect-square overflow-hidden rounded-lg bg-gray-100 dark:bg-neutral-900"
               >
                 {/* `fill` + a square wrapper means photos of any dimensions drop
                     in without being measured first. `sizes` matters here: two

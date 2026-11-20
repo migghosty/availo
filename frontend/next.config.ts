@@ -18,8 +18,17 @@ const nextConfig: NextConfig = {
    *
    * If the machine moves to a network with a different subnet (e.g. 192.168.0.x
    * or 10.0.0.x), add that pattern here too.
+   *
+   * Tailscale counts as well: its addresses come from the 100.64.0.0/10 CGNAT
+   * range (e.g. 100.77.240.123), plus MagicDNS names under `*.ts.net`. Loading
+   * the dev server over Tailscale without these hits exactly the failure above,
+   * on every page, including the admin.
+   *
+   * `127.0.0.1` is listed explicitly because Next 16 only trusts `localhost`
+   * by default — opening http://127.0.0.1:3000 on this very machine is
+   * treated as cross-origin and fails the same silent way.
    */
-  allowedDevOrigins: ["192.168.1.*"],
+  allowedDevOrigins: ["127.0.0.1", "192.168.1.*", "100.*.*.*", "*.ts.net"],
 
   async headers() {
     return [

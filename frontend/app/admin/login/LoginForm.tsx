@@ -26,7 +26,7 @@ export function LoginForm() {
           type="text"
           autoComplete="username"
           required
-          className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
 
@@ -43,7 +43,7 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          className="w-full border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          className="w-full border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
 
@@ -56,7 +56,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 mt-1"
+        className="w-full bg-blue-600 dark:shadow-glow hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 mt-1"
       >
         {isPending ? "Signing in…" : "Sign In"}
       </button>

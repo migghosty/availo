@@ -18,15 +18,15 @@ export default async function PublicLayout({
   const businessName = await getBusinessName();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col">
-      <header className="bg-slate-800 dark:bg-slate-900 text-white shadow-md">
+    <div className="min-h-screen page-glow bg-gray-50 dark:bg-black flex flex-col">
+      <header className="bg-black text-white shadow-glow-bar">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           {/* `min-w-0` + `truncate` let a long trading name ellipsize rather
               than shove the nav off the bar. With four links plus the toggle,
               a name like "Ada's Barbershop & Grooming" overflows 390px
               otherwise — the nav is what must survive, not the full name. */}
           <Link href="/" className="flex items-center gap-2 min-w-0">
-            <span className="text-amber-400 text-xl flex-none" aria-hidden>✂</span>
+            <span className="text-blue-400 drop-shadow-[0_0_8px_rgb(59_130_246/0.8)] text-xl flex-none" aria-hidden>✂</span>
             <span className="font-bold text-lg tracking-tight truncate">{businessName}</span>
           </Link>
           <div className="flex items-center gap-3 sm:gap-5 flex-none">
@@ -58,8 +58,12 @@ export default async function PublicLayout({
       {/* These two links are not decoration: the A2P 10DLC campaign
           registration asks for a public URL showing the messaging policy, and
           reviewers do open it. Footer rather than the header nav, which is
-          already tight on a phone. */}
-      <footer className="border-t border-gray-200 dark:border-slate-800 mt-8">
+          already tight on a phone.
+
+          Hidden for now: SMS isn't live yet, so the SMS Terms / Privacy links
+          aren't needed. Uncomment the block below before submitting the A2P
+          10DLC registration. The /sms-terms and /privacy pages still exist. */}
+      {/* <footer className="border-t border-gray-200 dark:border-blue-500/15 mt-8">
         <div className="max-w-3xl mx-auto px-4 py-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-slate-400">
           <span>
             &copy; {new Date().getFullYear()} {businessName}
@@ -83,7 +87,7 @@ export default async function PublicLayout({
             Privacy
           </Link>
         </div>
-      </footer>
+      </footer> */}
     </div>
   );
 }

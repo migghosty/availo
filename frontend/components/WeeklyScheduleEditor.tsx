@@ -155,7 +155,7 @@ export function WeeklyScheduleEditor({
 
   return (
     <div className="space-y-4">
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 divide-y divide-gray-100 dark:divide-slate-800">
+      <div className="bg-white dark:bg-neutral-950 rounded-xl border border-gray-200 dark:border-blue-500/15 divide-y divide-gray-100 dark:divide-blue-500/10">
         {WEEK_ORDER.map((day) => {
           const rows = week[day] ?? [];
           const isOpen = rows.length > 0;
@@ -184,7 +184,7 @@ export function WeeklyScheduleEditor({
                     aria-label={`${isOpen ? "Close" : "Open"} ${DAY_NAMES[day]}`}
                     onClick={() => toggleDay(day)}
                     className={`relative w-11 h-6 rounded-full transition-colors flex-none ${
-                      isOpen ? "bg-amber-500" : "bg-gray-300 dark:bg-slate-700"
+                      isOpen ? "bg-blue-600 dark:shadow-glow" : "bg-gray-300 dark:bg-neutral-700"
                     }`}
                   >
                     <span
@@ -205,7 +205,7 @@ export function WeeklyScheduleEditor({
                         value={row.start}
                         onChange={(e) => editWindow(day, row.id, "start", e.target.value)}
                         aria-label={`${DAY_NAMES[day]} start time`}
-                        className="flex-1 min-w-0 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        className="flex-1 min-w-0 border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       <span className="text-gray-400 dark:text-slate-500 flex-none">–</span>
                       <input
@@ -213,7 +213,7 @@ export function WeeklyScheduleEditor({
                         value={row.end}
                         onChange={(e) => editWindow(day, row.id, "end", e.target.value)}
                         aria-label={`${DAY_NAMES[day]} end time`}
-                        className="flex-1 min-w-0 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        className="flex-1 min-w-0 border border-gray-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-slate-100 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       <button
                         type="button"
@@ -230,7 +230,7 @@ export function WeeklyScheduleEditor({
                     <button
                       type="button"
                       onClick={() => addWindow(day)}
-                      className="text-xs text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 font-medium p-2 -m-2"
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium p-2 -m-2"
                     >
                       + Add hours
                     </button>
@@ -260,7 +260,7 @@ export function WeeklyScheduleEditor({
           type="button"
           onClick={handleSave}
           disabled={saving || !isDirty}
-          className="bg-amber-500 hover:bg-amber-600 text-white font-medium px-6 py-2.5 rounded-lg transition-colors disabled:opacity-60"
+          className="bg-blue-600 dark:shadow-glow hover:bg-blue-700 text-white font-medium px-6 py-2.5 rounded-lg transition-colors disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save schedule"}
         </button>

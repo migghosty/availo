@@ -62,7 +62,7 @@ export default async function BookingConfirmedPage({
 
   return (
     <div className="max-w-md">
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-green-200 dark:border-green-900 p-8">
+      <div className="bg-white dark:bg-neutral-950 rounded-xl border border-green-200 dark:border-green-900 p-8">
         <div className="flex items-center gap-3 mb-5">
           <span className="text-3xl">✓</span>
           <div>
@@ -71,7 +71,7 @@ export default async function BookingConfirmedPage({
           </div>
         </div>
 
-        <dl className="space-y-3 text-sm border-t border-gray-100 dark:border-slate-800 pt-5">
+        <dl className="space-y-3 text-sm border-t border-gray-100 dark:border-blue-500/15 pt-5">
           <div className="flex justify-between gap-3">
             <dt className="text-gray-500 dark:text-slate-400 flex-none">Date &amp; time</dt>
             <dd className="font-medium text-slate-700 dark:text-slate-200 text-right">
@@ -135,7 +135,7 @@ export default async function BookingConfirmedPage({
         {/* Who is on at what time. The totals above are the block; this is the
             running order the group has to know. */}
         {isGroup && (
-          <ol className="mt-5 pt-5 border-t border-gray-100 dark:border-slate-800 space-y-2 text-sm">
+          <ol className="mt-5 pt-5 border-t border-gray-100 dark:border-blue-500/15 space-y-2 text-sm">
             {group.legs.map((leg) => (
               <li key={leg.id} className="flex items-center justify-between gap-3">
                 <span className="font-medium text-slate-700 dark:text-slate-200 flex-none tabular-nums">
@@ -152,11 +152,11 @@ export default async function BookingConfirmedPage({
           </ol>
         )}
 
-        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-slate-800">
+        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-blue-500/15">
           <AddToCalendar bookings={group.legs} />
         </div>
 
-        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-slate-800">
+        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-blue-500/15">
           <Link
             href={cancelUrl}
             className="text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium transition-colors"

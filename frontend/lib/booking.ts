@@ -244,24 +244,34 @@ async function bookLegs({
           // One multi-row INSERT inside the transaction: a unique violation on
           // any leg aborts the statement and the transaction, so a block can
           // never commit half-written.
+          const snapshots = legs.map((leg, index) => ({
+            startTime: leg.start,
+            // Snapshotted, not joined: renaming or repricing the service
+            // later must not rewrite an appointment already confirmed.
+            durationMinutes: leg.service.durationMinutes,
+            serviceName: leg.service.name,
+            servicePriceCents: leg.service.priceCents,
+            clientName: name,
+            clientPhone: phone,
+            cancelToken: cancelTokens[index],
+            groupId,
+          }));
+
           await tx.booking.createMany({
-            data: legs.map((leg, index) => ({
-              startTime: leg.start,
-              // Snapshotted, not joined: renaming or repricing the service
-              // later must not rewrite an appointment already confirmed.
-              durationMinutes: leg.service.durationMinutes,
-              serviceId: leg.service.id,
-              serviceName: leg.service.name,
-              servicePriceCents: leg.service.priceCents,
-              clientName: name,
-              clientPhone: phone,
-              cancelToken: cancelTokens[index],
-              groupId,
+            data: snapshots.map((snapshot, index) => ({
+              ...snapshot,
+              serviceId: legs[index].service.id,
               // Only stamped when consent was actually asked for and given —
               // an unasked-for "yes" would be worthless as evidence.
               smsConsentAt: smsConsent ? new Date() : null,
             })),
           });
+
+          // The admin's permanent record. Inside the transaction so it commits
+          // or rolls back with the booking itself: a retried attempt leaves no
+          // stray history row, and a committed booking always has one. See
+          // the BookingHistory model for why this isn't a flag on Booking.
+          await tx.bookingHistory.createMany({ data: snapshots });
 
           return legs.map((leg, index) => ({
             startTime: leg.start,

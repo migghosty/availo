@@ -23,11 +23,11 @@ function getServerIsDark() {
 }
 
 const VARIANT_CLASSES = {
-  // For the always-dark-navy header/nav bars used across the app.
-  header: "text-slate-300 hover:text-white hover:bg-slate-700",
+  // For the always-black header/nav bars used across the app.
+  header: "text-slate-300 hover:text-white hover:bg-white/10",
   // For light-card contexts (e.g. the admin login card) that also need to work in dark mode.
   surface:
-    "text-gray-400 hover:text-slate-700 hover:bg-gray-100 dark:text-slate-500 dark:hover:text-slate-200 dark:hover:bg-slate-800",
+    "text-gray-400 hover:text-slate-700 hover:bg-gray-100 dark:text-slate-500 dark:hover:text-slate-200 dark:hover:bg-neutral-900",
 };
 
 export function ThemeToggle({

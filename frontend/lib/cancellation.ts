@@ -69,8 +69,27 @@ export async function cancelBooking(
   // missing row the way `delete` does. The `count === 0` test below is what
   // replaces that throw: without it, cancelling an already-cancelled booking
   // would report success and send a second cancellation text.
-  const { count } = await db.booking.deleteMany({
-    where: booking.groupId ? { groupId: booking.groupId } : { id: booking.id },
+  //
+  // The history rows are marked in the same transaction as the delete, so the
+  // admin's record can never say "still booked" about an appointment that's
+  // gone, or "cancelled" about one that isn't. Only rows not already marked,
+  // and only when the delete actually removed something — a lost race must
+  // not overwrite the winner's `cancelledBy`.
+  const count = await db.$transaction(async (tx) => {
+    const deleted = await tx.booking.deleteMany({
+      where: booking.groupId ? { groupId: booking.groupId } : { id: booking.id },
+    });
+    if (deleted.count === 0) return 0;
+
+    await tx.bookingHistory.updateMany({
+      where: {
+        cancelToken: { in: group.map((leg) => leg.cancelToken) },
+        cancelledAt: null,
+      },
+      data: { cancelledAt: new Date(), cancelledBy },
+    });
+
+    return deleted.count;
   });
 
   // Someone cancelled it between the read and the delete.

@@ -82,10 +82,11 @@ export function MonthCalendar({
           const isSelected = dateKey === selectedDate;
           const isToday = dateKey === todayKey;
 
-          // The ring marks "today" in amber so the you-are-here cue never
-          // competes with blue, which means "has availability".
+          // The ring marks "today" in black (white in dark mode) so the
+          // you-are-here cue never competes with blue, which means "has
+          // availability" — and blue is now the brand accent too.
           const todayRing = isToday
-            ? " ring-1 ring-inset ring-amber-400 dark:ring-amber-500"
+            ? " ring-1 ring-inset ring-slate-900 dark:ring-white"
             : "";
 
           if (!isAvailable) {
@@ -159,7 +160,7 @@ function MonthArrow({
     <Link
       href={href}
       aria-label={label}
-      className={`${shared} text-slate-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors`}
+      className={`${shared} text-slate-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-neutral-900 transition-colors`}
     >
       {glyph}
     </Link>
