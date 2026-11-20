@@ -58,8 +58,12 @@ export default async function PublicLayout({
       {/* These two links are not decoration: the A2P 10DLC campaign
           registration asks for a public URL showing the messaging policy, and
           reviewers do open it. Footer rather than the header nav, which is
-          already tight on a phone. */}
-      <footer className="border-t border-gray-200 dark:border-slate-800 mt-8">
+          already tight on a phone.
+
+          Hidden for now: SMS isn't live yet, so the SMS Terms / Privacy links
+          aren't needed. Uncomment the block below before submitting the A2P
+          10DLC registration. The /sms-terms and /privacy pages still exist. */}
+      {/* <footer className="border-t border-gray-200 dark:border-slate-800 mt-8">
         <div className="max-w-3xl mx-auto px-4 py-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-slate-400">
           <span>
             &copy; {new Date().getFullYear()} {businessName}
@@ -83,7 +87,7 @@ export default async function PublicLayout({
             Privacy
           </Link>
         </div>
-      </footer>
+      </footer> */}
     </div>
   );
 }
