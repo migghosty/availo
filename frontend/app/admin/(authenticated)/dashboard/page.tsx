@@ -172,25 +172,29 @@ async function loadGroupShape(bookings: { groupId: string | null }[]) {
 }
 
 export default async function DashboardPage() {
-  const [inputs, services] = await Promise.all([
+  // Two database round trips, not four: everything that doesn't depend on the
+  // booking list goes in the first batch, and the two lookups keyed by it go
+  // in the second. Awaited one by one these cost ~700 ms on the live site,
+  // where every round trip crosses to the database's region.
+  const [inputs, services, bookings] = await Promise.all([
     loadAvailabilityInputs(),
     getBookableServices(),
+    db.booking.findMany({
+      where: { startTime: { gte: new Date() } },
+      orderBy: { startTime: "asc" },
+    }),
   ]);
 
-  const bookings = await db.booking.findMany({
-    where: { startTime: { gte: new Date() } },
-    orderBy: { startTime: "asc" },
-  });
-
-  // Only the numbers already on screen, so this stays one small query however
-  // long the opt-out list grows.
-  const optedOutRows = await db.smsOptOut.findMany({
-    where: { phone: { in: bookings.map((booking) => booking.clientPhone) } },
-    select: { phone: true },
-  });
+  const [optedOutRows, { groupSizes, groupPositions }] = await Promise.all([
+    // Only the numbers already on screen, so this stays one small query
+    // however long the opt-out list grows.
+    db.smsOptOut.findMany({
+      where: { phone: { in: bookings.map((booking) => booking.clientPhone) } },
+      select: { phone: true },
+    }),
+    loadGroupShape(bookings),
+  ]);
   const optedOut = new Set(optedOutRows.map((row) => row.phone));
-
-  const { groupSizes, groupPositions } = await loadGroupShape(bookings);
 
   // There's no single open-slot count any more: a 15-minute service fits into
   // gaps an hour-long one can't. Counting with the shortest active service
